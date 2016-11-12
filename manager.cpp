@@ -11,6 +11,7 @@
 #include <vector>
 #include <list>
 #include <string>
+#include <numeric>
 
 
 // PROCESS MANAGEMENT HEADERS //////////////
@@ -24,6 +25,7 @@ using namespace std;
 
 // LOCAL FUNCTIONS
 int read_network_config(string fn);
+int wait_for_children (vector<pid_t> pids);
 
 ////////////////////////////////////////////
 int main (int argc, char* argv[]) {
@@ -36,8 +38,11 @@ int main (int argc, char* argv[]) {
 
     int router_count = 3;
 
+    // create and label routers in order
     vector<int> routers(router_count, DEFAULT_ID);
-    list<pid_t> router_pids;
+    iota(routers.begin(), routers.end(), 0);
+
+    vector<pid_t> router_pids;
 
 
     pid_t parent_pid = (long)getpid();
@@ -54,6 +59,8 @@ int main (int argc, char* argv[]) {
             
             // do child process things ...
 
+            // make parent wait a bit for child to quit
+            sleep(1);
 
             break;
         } else {
@@ -73,42 +80,12 @@ int main (int argc, char* argv[]) {
 
     }
 
-    //cout << "There are " << router_pids.size() << " router pids." << endl;
 
 
-
-
-    // wait on child processes to complete
-    int status = 0;
-    while ( !router_pids.empty() && parent_pid == (long)getpid()) {
-        pid_t finished = wait(&status);
-
-        if (finished == -1) {
-            switch (errno) {
-                case ECHILD:
-                    cout << "wait error: ECHILD" << endl;
-                    break;
-
-                case EINTR:
-                    cout << "wait error: EINTR" << endl;
-                    break;
-
-                case EINVAL:
-                    cout << "wait error: EINVAL" << endl;
-                    break;
-
-                default:
-                    cout << "wait error: unknown" << endl;
-                    break;
-            }
-        } else {
-            router_pids.remove(finished);
-            cout << "Process completed: " << finished << endl;
-        }
-
+    // wait on child processes to complete -- only if parent
+    if ( parent_pid == (long)getpid() ) {
+        wait_for_children(router_pids);
     }
-    cout << "All child prcesses have terminated." << endl;
-
 
     return 0;
 }
@@ -117,5 +94,40 @@ int read_network_config(string fn) {
 
     cout << "Reading network config file..." << endl;
 
+    return 0;
+}
+
+int wait_for_children (vector<pid_t> pids) {
+
+    int status = 0;
+    if ( pids.empty() ) {
+        cout << "wait_for_children: empty pid list" << endl;
+    } else { 
+        for (pid_t pid : pids) {
+            pid_t finished = waitpid(pid, &status, 0);
+
+            if (finished == -1) {
+                switch (errno) {
+                    case ECHILD:
+                        cout << "wait error: ECHILD" << endl;
+                        break;
+                    case EINTR:
+                        cout << "wait error: EINTR" << endl;
+                        break;
+                    case EINVAL:
+                        cout << "wait error: EINVAL" << endl;
+                        break;
+                    default:
+                        cout << "wait error: unknown" << endl;
+                        break;
+                }
+            } else {
+                cout << "Process completed: " << finished << ", " << pid << endl;
+            }
+
+        }
+    }
+
+    cout << "All child prcesses have terminated." << endl;
     return 0;
 }
