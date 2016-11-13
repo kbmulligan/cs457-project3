@@ -12,7 +12,7 @@
 #include <list>
 #include <string>
 #include <numeric>
-
+#include <fstream>
 
 // PROCESS MANAGEMENT HEADERS //////////////
 #include <unistd.h>
@@ -33,7 +33,7 @@ int main (int argc, char* argv[]) {
     cout << "manager starting..." << endl;
 
     // read input file
-    string config_fn = "default.config";
+    string config_fn = "network.conf";
     read_network_config(config_fn);
 
     int router_count = 3;
@@ -86,6 +86,7 @@ int main (int argc, char* argv[]) {
     if ( parent_pid == (long)getpid() ) {
         wait_for_children(router_pids);
     }
+    cout << "Goodbye!" << endl;
 
     return 0;
 }
@@ -94,7 +95,42 @@ int read_network_config(string fn) {
 
     cout << "Reading network config file..." << endl;
 
+    // open file
+    fstream config_file(fn, ios::in); 
+
+    if ( !config_file.is_open() ) {
+        cout << "File is not open...probably error opening file" << endl;
+    } else {
+        ;
+    }
+    
+    // read data
+    char buffer[MAX_CHARS];
+    config_file.getline(buffer, MAX_CHARS);
+    while ( string(buffer) != string("-1") ) {
+        cout << buffer << endl;
+        config_file.getline(buffer, MAX_CHARS); 
+    }
+
+
+    config_file.close();
+
     return 0;
+}
+
+fstream open_logfile (string fn) {
+
+    cout << "Opening logfile... " << endl;
+
+    fstream ofile(fn.c_str(), ios::out | ios::app);
+
+    if ( !ofile.is_open() ) {
+        cout << "File is not open...probably error opening file" << endl;
+    } else {
+        ;
+    }
+    
+    return ofile;
 }
 
 int wait_for_children (vector<pid_t> pids) {
