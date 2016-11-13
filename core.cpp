@@ -19,6 +19,7 @@
 #include <sstream>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -133,14 +134,18 @@ int send_string (int connectionfd, string str) {
 }
 
 string timestamp () {
-    time_t t = time(NULL);
     const int MAX_SIZE = 64;
     char stamp[MAX_SIZE];
     string format = "%T";
 
+    struct timeval tv;
+    time_t t = time(NULL);
+
+    gettimeofday(&tv, NULL);    
+    t = tv.tv_sec;    
+
     strftime(stamp, MAX_SIZE, format.c_str(), gmtime(&t)); 
 
-
-    string output = string(stamp) + " : " + string("");
+    string output = string(stamp) + " : " + to_string(tv.tv_usec);
     return output; 
 }

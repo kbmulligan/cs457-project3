@@ -20,21 +20,34 @@
 #include <sys/wait.h>
 
 #include "project3.h"
+#include "core.h"
 
 using namespace std;
 
 // LOCAL FUNCTIONS
-int read_network_config(string fn);
+vector<string> read_network_config(string fn);
+fstream open_logfile (string fn);
 int wait_for_children (vector<pid_t> pids);
+
+int start_router (int id);
 
 ////////////////////////////////////////////
 int main (int argc, char* argv[]) {
 
     cout << "manager starting..." << endl;
 
+    // testing 
+    cout << "timestamp test: " << timestamp() << endl;
+    cout << "timestamp test: " << timestamp() << endl;
+    cout << "timestamp test: " << timestamp() << endl;
+    cout << "timestamp test: " << timestamp() << endl;
+
+    // open log file
+    fstream logfile = open_logfile (log_fn_manager);
+
     // read input file
     string config_fn = "network.conf";
-    read_network_config(config_fn);
+    vector<string> config = read_network_config(config_fn);
 
     int router_count = 3;
 
@@ -58,9 +71,7 @@ int main (int argc, char* argv[]) {
 
             
             // do child process things ...
-
-            // make parent wait a bit for child to quit
-            sleep(1);
+            start_router(router);
 
             break;
         } else {
@@ -71,12 +82,21 @@ int main (int argc, char* argv[]) {
             router_pids.push_back(pid);
 
 
-            
             // do parent process things ...
 
 
-
         }
+
+    }
+
+
+    // do main work depending on client or router
+    if ( parent_pid == (long)getpid() ) {
+        cout << "Router creation complete... Starting router management..." << endl;
+
+        // do router management .........
+
+
 
     }
 
@@ -85,13 +105,13 @@ int main (int argc, char* argv[]) {
     // wait on child processes to complete -- only if parent
     if ( parent_pid == (long)getpid() ) {
         wait_for_children(router_pids);
+        cout << "Goodbye!" << endl;
     }
-    cout << "Goodbye!" << endl;
 
     return 0;
 }
 
-int read_network_config(string fn) {
+vector<string> read_network_config(string fn) {
 
     cout << "Reading network config file..." << endl;
 
@@ -105,17 +125,19 @@ int read_network_config(string fn) {
     }
     
     // read data
+    vector<string> config_data;
     char buffer[MAX_CHARS];
     config_file.getline(buffer, MAX_CHARS);
     while ( string(buffer) != string("-1") ) {
         cout << buffer << endl;
+        config_data.push_back(string(buffer));
         config_file.getline(buffer, MAX_CHARS); 
     }
 
 
     config_file.close();
 
-    return 0;
+    return config_data;
 }
 
 fstream open_logfile (string fn) {
@@ -165,5 +187,16 @@ int wait_for_children (vector<pid_t> pids) {
     }
 
     cout << "All child prcesses have terminated." << endl;
+    return 0;
+}
+
+// router needs to learn its ID and port
+int start_router (int data) {
+
+    cout << "Router started: " << data << endl;
+
+    // make parent wait a bit for child to quit
+    sleep(1);
+
     return 0;
 }
