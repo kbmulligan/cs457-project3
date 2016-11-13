@@ -1,3 +1,10 @@
+// core.h - Includes data structures for Project 3
+// Author: kbmulligan
+// CSU
+// CS457 - Networks
+// Dr. Ray
+// Fall 2016
+
 #ifndef CORE_H_INCLUDED 
 #define CORE_H_INCLUDED
 
@@ -15,6 +22,7 @@ const int BACKLOG = 1;
 
 // FUNCTIONS //////////////////////////////////////////////
 std::string get_ip (void);
+std::string timestamp (void);
 
 short read_short (int connectionfd);
 int send_short (int connectionfd, short data);

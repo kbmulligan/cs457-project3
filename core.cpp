@@ -11,9 +11,11 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
+#include <ctime>
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <chrono>
 #include <sstream>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -128,4 +130,17 @@ int send_string (int connectionfd, string str) {
         cout << "send_string: send failed, status: " << status << endl;
     }
     return 0;
+}
+
+string timestamp () {
+    time_t t = time(NULL);
+    const int MAX_SIZE = 64;
+    char stamp[MAX_SIZE];
+    string format = "%T";
+
+    strftime(stamp, MAX_SIZE, format.c_str(), gmtime(&t)); 
+
+
+    string output = string(stamp) + " : " + string("");
+    return output; 
 }
