@@ -7,6 +7,10 @@ TODO: Describe the installation process
 ## Usage
 TODO: Write usage instructions
 
+
+## Notes
+- Timestamps use UTC and have a resolution down to microseconds
+
 ## Contributing
 N/A (Schoolwork)
 

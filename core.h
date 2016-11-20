@@ -14,7 +14,7 @@
 #include <iostream>
 
 // CONSTANTS //////////////////////////////////////////////
-const bool VERBOSE = true;
+const bool VERBOSE = false;
 const int MAX_CHARS = 255;
 const int MAX_URL_SIZE = MAX_CHARS;
 const int BACKLOG = 1;
@@ -29,5 +29,6 @@ int send_short (int connectionfd, short data);
 std::string read_string (int connectionfd, int string_len);
 int send_string (int connectionfd, std::string str);
 
+std::fstream open_logfile (std::string fn);
 #endif
 

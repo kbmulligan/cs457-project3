@@ -5,20 +5,31 @@
 // Dr. Ray
 // Fall 2016
 
-#include <string>
-
 #ifndef PROJECT3HEADER
 #define PROJECT3HEADER
 
+#include <string>
+
+// CONSTANTS ///////////////////////////////
+const int start_port = 48000;
 const int DEFAULT_ID = 1;
-const int MAX_CHARS = 255;
-const std::string log_fn_manager = "manager.log";
-const std::string log_fn_router = "manager.log";
+const std::string log_fn_manager = "manager.out";
+const std::string log_fn_router = "router.out";
+
+
+// DATA STRUCTURES /////////////////////////
+typedef struct _Message {
+    int message;
+    int src;
+    int dest;
+} Message;
+
 
 class Network {
 
+    std::string fn;
     int nodes;
-    
+    int edges;    
 
 public:
     Network () {
@@ -30,6 +41,13 @@ public:
         return 0;
     }
 
+    
+
 };
+
+
+// FUNCTION ////////////////////////////////
+
+int initialize_router(int data);
 
 #endif

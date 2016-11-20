@@ -146,6 +146,25 @@ string timestamp () {
 
     strftime(stamp, MAX_SIZE, format.c_str(), gmtime(&t)); 
 
-    string output = string(stamp) + " : " + to_string(tv.tv_usec);
+    string output = string(stamp) + "." + to_string(tv.tv_usec);
+    
+    // add extra space because aesthetics
+    output += ' ';
+
     return output; 
+}
+
+fstream open_logfile (string fn) {
+
+    cout << "Opening logfile... " << endl;
+
+    fstream ofile(fn.c_str(), ios::out);
+
+    if ( !ofile.is_open() ) {
+        cout << "File is not open...probably error opening file" << endl;
+    } else {
+        ;
+    }
+    
+    return ofile;
 }

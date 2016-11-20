@@ -25,8 +25,9 @@
 using namespace std;
 
 // LOCAL FUNCTIONS
-vector<string> read_network_config(string fn);
-fstream open_logfile (string fn);
+vector<string> read_network_config (string fn);
+void print_config (vector<string> config);
+
 int wait_for_children (vector<pid_t> pids);
 
 int start_router (int id);
@@ -44,15 +45,27 @@ int main (int argc, char* argv[]) {
 
     // open log file
     fstream logfile = open_logfile (log_fn_manager);
+    logfile << timestamp() << "Logfile opened..." << endl;
 
     // read input file
     string config_fn = "network.conf";
     vector<string> config = read_network_config(config_fn);
 
+    // show input file
+    print_config(config);
+
+    // parse input file
+    // parse_config(config);
+
+
+
+
     int router_count = 3;
 
-    // create and label routers in order
+    // create routers 
     vector<int> routers(router_count, DEFAULT_ID);
+
+    // label routers in range order from 0 to router_count - 1
     iota(routers.begin(), routers.end(), 0);
 
     vector<pid_t> router_pids;
@@ -66,16 +79,19 @@ int main (int argc, char* argv[]) {
         pid = fork();
 
         if (pid == 0) {
-            cout << "I'm the child!" << endl;
-            cout << "Router: " << router << endl;
-
+            if (VERBOSE) {
+                cout << "I'm the child!" << endl;
+                cout << "Router: " << router << endl;
+            }
             
             // do child process things ...
             start_router(router);
 
             break;
         } else {
-            cout << "I'm the parent!" << endl;
+            if (VERBOSE) {
+                cout << "I'm the parent!" << endl;
+            }
             cout << "Router " << router << " created, with pid: " << pid << endl;
 
             // track child pid
@@ -102,9 +118,14 @@ int main (int argc, char* argv[]) {
 
 
 
+    // close log file
+    logfile.close();
+
     // wait on child processes to complete -- only if parent
     if ( parent_pid == (long)getpid() ) {
         wait_for_children(router_pids);
+
+        cout << "timestamp test: " << timestamp() << endl;
         cout << "Goodbye!" << endl;
     }
 
@@ -140,20 +161,21 @@ vector<string> read_network_config(string fn) {
     return config_data;
 }
 
-fstream open_logfile (string fn) {
+void print_config (vector<string> config) {
 
-    cout << "Opening logfile... " << endl;
-
-    fstream ofile(fn.c_str(), ios::out | ios::app);
-
-    if ( !ofile.is_open() ) {
-        cout << "File is not open...probably error opening file" << endl;
+    if (config.empty()) {
+        cout << "CANNOT PRINT: EMPTY CONFIG!" << endl;
     } else {
-        ;
+        cout << "--- Network configuration ---" << endl;
+        for (string s : config) {
+            cout << s << endl;
+        }
+        cout << "Nodes: " << config[0] << endl;
+        cout << "Edges (well, size - 1): " << config.size() - 1 << endl;
+        cout << "-----------------------------" << endl;
     }
-    
-    return ofile;
 }
+
 
 int wait_for_children (vector<pid_t> pids) {
 
@@ -193,7 +215,9 @@ int wait_for_children (vector<pid_t> pids) {
 // router needs to learn its ID and port
 int start_router (int data) {
 
-    cout << "Router started: " << data << endl;
+    //cout << "Router started: " << data << endl;
+
+    initialize_router (data);                         // from router.cpp
 
     // make parent wait a bit for child to quit
     sleep(1);
