@@ -15,7 +15,6 @@
 
 // CONSTANTS //////////////////////////////////////////////
 const bool VERBOSE = false;
-const int MAX_CHARS = 255;
 const int MAX_URL_SIZE = MAX_CHARS;
 const int BACKLOG = 1;
 

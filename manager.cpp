@@ -27,6 +27,7 @@ using namespace std;
 // LOCAL FUNCTIONS
 vector<string> read_network_config (string fn);
 void print_config (vector<string> config);
+string log_entry (string entry);
 
 int wait_for_children (vector<pid_t> pids);
 
@@ -53,6 +54,11 @@ int main (int argc, char* argv[]) {
 
     // show input file
     print_config(config);
+
+
+    Network network(config_fn);
+    network.read_config(config_fn);
+    network.print_config();
 
     // parse input file
     // parse_config(config);
@@ -93,6 +99,7 @@ int main (int argc, char* argv[]) {
                 cout << "I'm the parent!" << endl;
             }
             cout << "Router " << router << " created, with pid: " << pid << endl;
+            logfile << timestamp() << "Router " << router << " created, with pid: " << pid << endl;
 
             // track child pid
             router_pids.push_back(pid);
@@ -109,6 +116,7 @@ int main (int argc, char* argv[]) {
     // do main work depending on client or router
     if ( parent_pid == (long)getpid() ) {
         cout << "Router creation complete... Starting router management..." << endl;
+        logfile << log_entry(string("Router creation complete... Starting router management..."));
 
         // do router management .........
 
@@ -149,6 +157,15 @@ vector<string> read_network_config(string fn) {
     vector<string> config_data;
     char buffer[MAX_CHARS];
     config_file.getline(buffer, MAX_CHARS);
+    while ( string(buffer) != string("-1") ) {
+        cout << buffer << endl;
+        config_data.push_back(string(buffer));
+        config_file.getline(buffer, MAX_CHARS); 
+    }
+
+    config_file.getline(buffer, MAX_CHARS); 
+
+    // this part picks up the packet transmissions
     while ( string(buffer) != string("-1") ) {
         cout << buffer << endl;
         config_data.push_back(string(buffer));
@@ -223,4 +240,8 @@ int start_router (int data) {
     sleep(1);
 
     return 0;
+}
+
+string log_entry (string entry) {
+    return timestamp() + entry + string("\n");
 }
