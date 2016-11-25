@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "core.h"
+#include "project3.h"
 
 using namespace std;
 
@@ -106,7 +107,8 @@ int send_short (int connectionfd, short data) {
 // reads string_legnth bytes of data from socket connectionfd and returns it as string
 string read_string (int connectionfd, int string_length) {
    
-    cout << "Reading string... of length: " << string_length << " on socket: " << connectionfd << endl; 
+    cout << "Reading string... of length: " << string_length <<
+            " on socket: " << connectionfd << endl; 
 
     char buffer[string_length];
     int status = read(connectionfd, buffer, string_length); 
@@ -119,7 +121,8 @@ string read_string (int connectionfd, int string_length) {
 
 int send_string (int connectionfd, string str) {
 
-    cout << "Sending string... of length: " << str.size() << " on socket: " << connectionfd << endl; 
+    cout << "Sending string... of length: " << str.size() <<
+            " on socket: " << connectionfd << endl; 
 
     int flags = 0;
     char string_data[str.size()];
@@ -156,7 +159,7 @@ string timestamp () {
 
 fstream open_logfile (string fn) {
 
-    cout << "Opening logfile... " << endl;
+    //cout << "Opening logfile... " << endl;
 
     fstream ofile(fn.c_str(), ios::out);
 
@@ -168,3 +171,167 @@ fstream open_logfile (string fn) {
     
     return ofile;
 }
+
+string log_entry (string entry) {
+    return timestamp() + entry + string("\n");
+}
+
+int start_listening_TCP (int portreq) {
+    return start_listening (portreq, SOCK_STREAM);
+}
+
+int start_listening_UDP (int portreq) {
+    return start_listening (portreq, SOCK_DGRAM);
+}
+
+int start_listening (int portreq, int type) {
+    
+    string port(to_string(portreq)); 
+    struct addrinfo hints, *res, *p;
+    int sockfd, connectedfd = -1;
+
+    int returninfo = -1;
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = type;            // SOCK_STREAM or SOCK_DGRAM
+    hints.ai_flags = AI_PASSIVE;         // use the IP of this machine
+
+    int status = getaddrinfo(NULL, port.c_str(), &hints, &res);
+    if (status == -1) {
+        cerr << "start_listening error: getaddrinfo" << endl;
+        return -1;
+    }
+    
+    int usable_addresses = 0;
+    for (p = res; p != NULL; p = p->ai_next) {
+        usable_addresses++;
+        
+        char ipaddrstr[INET6_ADDRSTRLEN];
+        inet_ntop(p->ai_family, &((struct sockaddr_in *)(res->ai_addr))->sin_addr, 
+                    ipaddrstr, INET6_ADDRSTRLEN); 
+        // cout << "Address info : ";
+        // cout << ipaddrstr << endl;
+    } 
+
+    // cout << "getaddrinfo usable addresses : " << usable_addresses << endl;
+
+    sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if (status == -1) {
+        cerr << "start_listening error: socket" << endl;
+        return -1;
+    }
+
+    status = bind(sockfd, res->ai_addr, res->ai_addrlen);
+    if (status == -1) {
+        close(sockfd);
+        cerr << "start_listening error: bind" << endl;
+        return -1;
+    }
+    
+    // TCP-ONLY STUFF
+    if (type == SOCK_STREAM) {
+        status = listen(sockfd, BACKLOG);
+        if (status == -1) {
+            close(sockfd);
+            cerr << "start_listening error: listen" << endl;
+            return -1;
+        }
+ 
+        cout << "TCP waiting for a connection on " << get_ip() << " : " << port << endl;
+
+        struct sockaddr_storage peeraddr;
+        socklen_t peeraddrsize = sizeof(peeraddr);
+
+        connectedfd = accept(sockfd, (struct sockaddr *)&peeraddr, &peeraddrsize);
+        if (connectedfd == -1) {
+            cerr << "start_listening error: accept" << endl;
+            return -1;
+        } else {
+            char peeraddrstr[INET6_ADDRSTRLEN];
+            inet_ntop(AF_INET, &((struct sockaddr_in*) &peeraddr)->sin_addr, 
+                        peeraddrstr, INET6_ADDRSTRLEN);
+            //cout << "Good connection!" << endl;
+            //cout << "Connection from : " << peeraddrstr << endl;
+            cout << "Received connection..." << endl;
+
+            talk_to_client (connectedfd);
+            returninfo = connectedfd;
+        }
+
+    } 
+
+    // UDP-ONLY STUFF 
+    else {
+        cout << "UDP listening on " << get_ip() << " : " << port << " Port requested: " << portreq << endl;
+        returninfo = portreq;
+    }
+    
+    freeaddrinfo(res);
+
+    //close(sockfd);
+    //close(connectedfd);
+
+    // return portrequested (UDP) or connection file descriptor (TCP)
+    return returninfo;
+}
+
+
+int connect_to (int portreq) {
+
+    string ip = get_ip();
+    string port = to_string(portreq);
+
+    if (VERBOSE) {
+        cout << "Connecting to..." << endl;
+        cout << "SERVER : " << ip << endl;
+        cout << "PORT   : " << port << endl;
+    }
+
+    struct addrinfo hints, *res;
+    int sockfd = -1;
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+
+    int status = getaddrinfo(ip.c_str(), port.c_str(), &hints, &res);
+    if (status == -1) {
+        cerr << "connect_to error: getaddrinfo" << endl;
+        return 2;
+    }
+    
+    sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if (status == -1) {
+        cerr << "connect_to error: socket" << endl;
+        return 2;
+    }
+
+    status = connect(sockfd, res->ai_addr, res->ai_addrlen);
+    if (status == -1) {
+        close(sockfd);
+        cerr << "connect_to error: connect failed" << endl;
+        return 2;
+    }
+
+    // done with this addrinfo
+    freeaddrinfo(res);
+    
+    // check if everything's good to go, then start comm
+    if (!sockfd) {
+        cerr << "connect_to error: sockfd == NULL" << endl;
+    }
+    
+    return sockfd;
+}
+
+// pass info from manager back to client
+int talk_to_client (int connectedfd) {
+
+    cout << "Talking to client now..." << endl;
+
+
+    sleep(3);
+    return 0;
+}
+

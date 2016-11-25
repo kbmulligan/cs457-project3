@@ -14,8 +14,8 @@
 #include <iostream>
 
 // CONSTANTS ///////////////////////////////
-const int start_port = 48000;
-const int MAX_CHARS = 255;
+const int start_port_manager = 48000;
+const int start_port_router = 49000;
 const int DEFAULT_ID = 1;
 const std::string log_fn_manager = "manager.out";
 const std::string log_fn_router = "router.out";
@@ -36,6 +36,7 @@ class Network {
     int edges;    
     int transmissions;    
 
+    const int MAX_CHARS = 127;
     std::vector<std::string> config;
 
 public:
@@ -44,6 +45,18 @@ public:
         nodes = 0;
         edges = 0;
         transmissions = 0;
+    }
+
+    int get_nodes () {
+        return nodes;
+    }
+
+    int get_edges () {
+        return edges;
+    }
+
+    int get_transmissions () {
+        return transmissions;
     }
 
     int read_config (std::string filename) {

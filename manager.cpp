@@ -4,8 +4,7 @@
 // CSU
 // CS457 - Networks
 // Dr. Ray
-// Fall 2016
-
+// Fall 2016 
 // DATA STRUCTURE HEADERS //////////////////
 #include <iostream>
 #include <vector>
@@ -19,29 +18,42 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+// SPECIFIC HEADERS /////////////////////////
 #include "project3.h"
 #include "core.h"
 
 using namespace std;
 
 // LOCAL FUNCTIONS
+void usage (int argc, char* argv[]);
 vector<string> read_network_config (string fn);
 void print_config (vector<string> config);
-string log_entry (string entry);
 
 int wait_for_children (vector<pid_t> pids);
 
 int start_router (int id);
 
+// CONSTANTS ///////////////////////////////
+const int ARGS = 2;
+const int ROUTER_LABEL_START = 0;
+
 ////////////////////////////////////////////
 int main (int argc, char* argv[]) {
 
+    // get options
+    string config_fn = "network.conf";
+
+    if (argc != ARGS) {
+        usage(argc, argv);
+        exit(0);
+    } else {
+        config_fn = string(argv[1]);
+    }
+
+    // start printing
     cout << "manager starting..." << endl;
 
     // testing 
-    cout << "timestamp test: " << timestamp() << endl;
-    cout << "timestamp test: " << timestamp() << endl;
-    cout << "timestamp test: " << timestamp() << endl;
     cout << "timestamp test: " << timestamp() << endl;
 
     // open log file
@@ -49,30 +61,18 @@ int main (int argc, char* argv[]) {
     logfile << timestamp() << "Logfile opened..." << endl;
 
     // read input file
-    string config_fn = "network.conf";
-    vector<string> config = read_network_config(config_fn);
-
-    // show input file
-    print_config(config);
-
-
     Network network(config_fn);
     network.read_config(config_fn);
     network.print_config();
 
-    // parse input file
-    // parse_config(config);
 
-
-
-
-    int router_count = 3;
+    int router_count = network.get_nodes();
 
     // create routers 
     vector<int> routers(router_count, DEFAULT_ID);
 
     // label routers in range order from 0 to router_count - 1
-    iota(routers.begin(), routers.end(), 0);
+    iota(routers.begin(), routers.end(), ROUTER_LABEL_START);
 
     vector<pid_t> router_pids;
 
@@ -106,6 +106,13 @@ int main (int argc, char* argv[]) {
 
 
             // do parent process things ...
+            cout << "Router: " << router << endl;
+            logfile << log_entry(string("Listening on TCP port ") + to_string(start_port_manager));
+            int connection = start_listening_TCP (start_port_manager + router);
+            logfile << log_entry(string("Received connection from ") + to_string(connection));
+
+            unsigned short udp_port = read_short(connection);
+            cout << "Connected router is listening on UDP port: " << udp_port << endl;
 
 
         }
@@ -121,23 +128,28 @@ int main (int argc, char* argv[]) {
         // do router management .........
 
 
-
     }
 
 
-
-    // close log file
-    logfile.close();
+    
 
     // wait on child processes to complete -- only if parent
     if ( parent_pid == (long)getpid() ) {
         wait_for_children(router_pids);
+        
+        // close log file
+        logfile << log_entry("Closing logfile...");
+        logfile.close();
 
         cout << "timestamp test: " << timestamp() << endl;
         cout << "Goodbye!" << endl;
     }
 
     return 0;
+}
+
+void usage (int argc, char* argv[]) {
+    cout << "Usage: " << argv[0] << " <input file>" << endl;
 }
 
 vector<string> read_network_config(string fn) {
@@ -242,6 +254,3 @@ int start_router (int data) {
     return 0;
 }
 
-string log_entry (string entry) {
-    return timestamp() + entry + string("\n");
-}
