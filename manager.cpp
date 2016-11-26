@@ -54,7 +54,7 @@ int main (int argc, char* argv[]) {
     cout << "manager starting..." << endl;
 
     // testing 
-    cout << "timestamp test: " << timestamp() << endl;
+    cout << "timestamp: " << timestamp() << endl;
 
     // open log file
     fstream logfile = open_logfile (log_fn_manager);
@@ -105,14 +105,26 @@ int main (int argc, char* argv[]) {
             router_pids.push_back(pid);
 
 
-            // do parent process things ...
-            cout << "Router: " << router << endl;
-            logfile << log_entry(string("Listening on TCP port ") + to_string(start_port_manager));
-            int connection = start_listening_TCP (start_port_manager + router);
-            logfile << log_entry(string("Received connection from ") + to_string(connection));
+            // do parent process things ... like listen for contact
+            // and get UDP port from router
+            int listen_port = start_port_manager + router;
 
+            logfile << timestamp() << string("Listening on TCP port: ") <<
+                                  to_string(listen_port) << endl;
+
+            int connection = start_listening_TCP (listen_port);
+
+            // get connection
+            logfile << timestamp() << string("Received connection from socket: ") << 
+                                  to_string(connection) << endl;
+
+            // read UDP port for connecting router
             unsigned short udp_port = read_short(connection);
             cout << "Connected router is listening on UDP port: " << udp_port << endl;
+
+
+            // TODO: add UDP port data to directory
+
 
 
         }
@@ -120,12 +132,31 @@ int main (int argc, char* argv[]) {
     }
 
 
+
+    // TODO
+    // router processes are created, let them know they can build routing tables
+    for ( int router : routers ) {
+        // send_message(connection, build_msg);
+        logfile << timestamp() << "Router " << router << " instructed to build table..." << endl;
+    }
+
+
+
+
     // do main work depending on client or router
     if ( parent_pid == (long)getpid() ) {
-        cout << "Router creation complete... Starting router management..." << endl;
-        logfile << log_entry(string("Router creation complete... Starting router management..."));
+        cout << "Router creation complete... Starting packet routing..." << endl;
+        logfile << log_entry(string("Router creation complete... Starting packet routing..."));
 
-        // do router management .........
+        // do packet spawning .........
+
+        vector<string> packets = network.get_packets(); 
+        for (string s : packets) {
+            cout << "Transmitting packet: " << s << endl;
+            logfile << log_entry("Transmitting packet: " + s);
+
+            // tell src router to send packet to dst
+        }
 
 
     }
@@ -136,12 +167,13 @@ int main (int argc, char* argv[]) {
     // wait on child processes to complete -- only if parent
     if ( parent_pid == (long)getpid() ) {
         wait_for_children(router_pids);
+        logfile << log_entry(string("All child processes have completed."));
         
         // close log file
         logfile << log_entry("Closing logfile...");
         logfile.close();
 
-        cout << "timestamp test: " << timestamp() << endl;
+        cout << "timestamp: " << timestamp() << endl;
         cout << "Goodbye!" << endl;
     }
 

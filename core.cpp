@@ -33,7 +33,7 @@ using namespace std;
 
 
 // FUNCTIONS //////////////////////////////////////////////
-
+int send_message (int conn, Message msg);
 
 string get_ip () {
  
@@ -238,7 +238,7 @@ int start_listening (int portreq, int type) {
             return -1;
         }
  
-        cout << "TCP waiting for a connection on " << get_ip() << " : " << port << endl;
+        // cout << "TCP waiting for a connection on " << get_ip() << " : " << port << endl;
 
         struct sockaddr_storage peeraddr;
         socklen_t peeraddrsize = sizeof(peeraddr);
@@ -253,7 +253,8 @@ int start_listening (int portreq, int type) {
                         peeraddrstr, INET6_ADDRSTRLEN);
             //cout << "Good connection!" << endl;
             //cout << "Connection from : " << peeraddrstr << endl;
-            cout << "Received connection..." << endl;
+
+            // cout << "Received connection..." << endl;
 
             talk_to_client (connectedfd);
             returninfo = connectedfd;
@@ -263,7 +264,7 @@ int start_listening (int portreq, int type) {
 
     // UDP-ONLY STUFF 
     else {
-        cout << "UDP listening on " << get_ip() << " : " << port << " Port requested: " << portreq << endl;
+        //cout << "UDP listening on " << get_ip() << " : " << port << endl;
         returninfo = portreq;
     }
     
@@ -328,10 +329,25 @@ int connect_to (int portreq) {
 // pass info from manager back to client
 int talk_to_client (int connectedfd) {
 
-    cout << "Talking to client now..." << endl;
+    // cout << "Talking to client now..." << endl;
 
 
-    sleep(3);
+    sleep(0);
     return 0;
 }
 
+// send message
+int send_message (int conn, Message msg) {
+
+    send_short(conn, (unsigned short)msg.src_router);
+    send_short(conn, (unsigned short)msg.dst_router);
+    send_short(conn, (unsigned short)msg.message);
+
+    return 0;
+}
+
+string printable_msg (Message msg) {
+    return  "SRC:" + to_string(msg.src_router) + " " + 
+            "DST:" + to_string(msg.dst_router) + " " + 
+            "MSG:" + to_string(msg.message);
+}

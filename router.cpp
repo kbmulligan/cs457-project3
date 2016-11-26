@@ -23,7 +23,7 @@ int initialize_router (int data) {
 
     int id = data;
 
-    cout << "Router iniitialized from router.cpp ... " << id << endl;
+    //cout << "Router iniitialized from router.cpp ... " << id << endl;
 
     string log_fn = logfile_prefix + to_string(id) + logfile_suffix;
     fstream logfile = open_logfile(log_fn);
@@ -39,19 +39,33 @@ int initialize_router (int data) {
 
 
     // create TCP port for talking with manager 
+    unsigned short control_port = start_port_manager + id;
     logfile << log_entry("Connecting to manager...");
-    int manager_cfd = connect_to (start_port_manager + id);
-    logfile << log_entry("Connected on port " + to_string(manager_cfd));
+    int manager_cfd = connect_to (control_port);
+    logfile << log_entry("Connected on socket: " + to_string(manager_cfd));
 
     // send UDP port number and request node address and connectivity table
-    cout << "Router " << id << " sending data: " << port << endl;
+    //cout << "Router " << id << " sending data: " << port << endl;
+    logfile << timestamp() << "Router sending data to manager: " << port << endl;
     send_short(manager_cfd, port);
 
     // wait for info from manager
+    
+
+
 
     // send ready msg
+    Message msg;
+    msg.src_router = id;
+    msg.dst_router = MANAGER_ID;    
+    msg.message = READY;
+
+    logfile << timestamp() << "Router sending message: " << printable_msg(msg) << endl;
+    send_message(manager_cfd, msg);
 
     // wait for go msg from manager
+    short signal = read_short(manager_cfd);
+    cout << "Router received Signal: " << signal << endl;
 
     // send link request to neighbors
 

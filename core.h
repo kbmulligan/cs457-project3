@@ -17,7 +17,7 @@
 const bool VERBOSE = false;
 const int MAX_CHARS = 127;
 const int MAX_URL_SIZE = MAX_CHARS;
-const int BACKLOG = 10;
+const int BACKLOG = 1;
 
 
 // FUNCTIONS //////////////////////////////////////////////

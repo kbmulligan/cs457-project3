@@ -17,29 +17,50 @@
 const int start_port_manager = 48000;
 const int start_port_router = 49000;
 const int DEFAULT_ID = 1;
+const int MANAGER_ID = -1;
 const std::string log_fn_manager = "manager.out";
 const std::string log_fn_router = "router.out";
 
 
 // DATA STRUCTURES /////////////////////////
+
+// message AKA packet
+// message field is one of:
+// 0 = empty
+// 1 = ready
+// 2 = default / hello
+// 3 = quit
+// 4 = table update follows 
+// 99 = error 
+const int EMPTY = 0;
+const int READY = 1;
+const int HELLO = 2;
+const int QUIT = 3;
+const int TABLE_UPDATE = 4;
+const int ERROR = 99;
+
 typedef struct _Message {
     int message;
-    int src;
-    int dest;
+    int src_router;
+    int dst_router;
 } Message;
 
-
+// network class describes and manages network
 class Network {
+
+    const int MAX_CHARS = 127;
 
     std::string fn;
     int nodes;
-    int edges;    
-    int transmissions;    
+    int edges;                              // number of edges
+    int transmissions;                      // number of packet transmissions 
 
-    const int MAX_CHARS = 127;
     std::vector<std::string> config;
+    std::vector<std::string> connections;   // edges
+    std::vector<std::string> packet_moves;  // transmissions
 
 public:
+
     Network (std::string filename) {
         fn = filename;
         nodes = 0;
@@ -57,6 +78,14 @@ public:
 
     int get_transmissions () {
         return transmissions;
+    }
+
+    std::vector<std::string> get_packets () {
+        return packet_moves;
+    }
+
+    std::vector<std::string> get_connections () {
+        return connections;
     }
 
     int read_config (std::string filename) {
@@ -82,27 +111,31 @@ public:
         char buffer[MAX_CHARS];
         config_file.getline(buffer, MAX_CHARS);
         while ( std::string(buffer) != std::string("-1") ) {
-            std::cout << buffer << std::endl;
+            //std::cout << buffer << std::endl;
             config.push_back(std::string(buffer));
+            connections.push_back(std::string(buffer));
             config_file.getline(buffer, MAX_CHARS); 
         }
 
-
         nodes = std::stoi(config[0]);
-        edges = config.size() - 1;
+  
+        connections.erase(connections.begin());
+        edges = connections.size();
 
         config_file.getline(buffer, MAX_CHARS); 
 
         // this part picks up the packet transmissions
         while ( std::string(buffer) != std::string("-1") ) {
-            std::cout << buffer << std::endl;
+            //std::cout << buffer << std::endl;
             config.push_back(std::string(buffer));
+            packet_moves.push_back(std::string(buffer));
             config_file.getline(buffer, MAX_CHARS); 
         }
 
-        transmissions = config.size() - edges - 1;
+        transmissions = packet_moves.size();
 
         config_file.close();
+
         return 0;
     }
 
@@ -112,12 +145,17 @@ public:
             std::cout << "CANNOT PRINT: EMPTY CONFIG!" << std::endl;
         } else {
             std::cout << "--- Network configuration ---" << std::endl;
-            for (std::string s : config) {
-                std::cout << s << std::endl;
-            }
             std::cout << "Nodes: " << nodes << std::endl;
+
             std::cout << "Edges: " << edges << std::endl;
+            for (std::string e : connections) {
+                std::cout << e << std::endl;
+            }
+
             std::cout << "Transmissions: " << transmissions << std::endl;
+            for (std::string t : packet_moves) {
+                std::cout << t << std::endl;
+            }
             std::cout << "-----------------------------" << std::endl;
         }
 
@@ -131,5 +169,7 @@ public:
 // FUNCTION ////////////////////////////////
 
 int initialize_router(int data);
+int send_message (int conn, Message msg);
+std::string printable_msg (Message msg);
 
 #endif
