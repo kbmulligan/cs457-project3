@@ -44,15 +44,25 @@ const int TABLE_BUILD = 4;
 const int ERROR = 99;
 
 // simple message packet format
+const unsigned int ITEMS_IN_MESSAGE = 3;
 typedef struct _Message {
     int message;
     int src_router;
     int dst_router;
 } Message;
 
+const unsigned int ITEMS_IN_CONNECTION = 3;
+typedef struct _Connection {
+    unsigned short src_id;
+    unsigned short dst_id;
+    unsigned short cost;
+} Connection;
+
+
 // router config
 class Router {
     int id;
+    std::vector<Connection> neighbor_connections;
     std::vector<int> neighbors;
     std::vector<int> costs;
     std::vector<int> ports;
@@ -67,6 +77,12 @@ public:
         neighbors.push_back(nid);
         costs.push_back(cost);
         ports.push_back(port);
+
+        Connection n;
+        n.src_id = id;
+        n.dst_id = nid;
+        n.cost = cost;
+        neighbor_connections.push_back(n);
     }
 
     int get_id () {
@@ -101,6 +117,8 @@ class Network {
     std::vector<std::string> connections;   // edges
     std::vector<std::string> packet_moves;  // transmissions
 
+    std::vector<Connection> links;          // edges
+
 public:
 
     Network (std::string filename) {
@@ -130,56 +148,9 @@ public:
         return connections;
     }
 
-    int read_config (std::string filename) {
+    std::vector<Connection> get_connections_for_node (int node);
 
-        if (filename.empty()) {
-            ;
-        } else {
-            fn = filename;
-        } 
-    
-        std::cout << "Reading network config file..." << std::endl;
-
-        // open file
-        std::fstream config_file(fn, std::ios::in); 
-
-        if ( !config_file.is_open() ) {
-            std::cout << "File is not open...probably error opening file" << std::endl;
-        } else {
-            ;
-        }
-        
-        // read data
-        char buffer[MAX_CHARS];
-        config_file.getline(buffer, MAX_CHARS);
-        while ( std::string(buffer) != std::string("-1") ) {
-            //std::cout << buffer << std::endl;
-            config.push_back(std::string(buffer));
-            connections.push_back(std::string(buffer));
-            config_file.getline(buffer, MAX_CHARS); 
-        }
-
-        nodes = std::stoi(config[0]);
-  
-        connections.erase(connections.begin());
-        edges = connections.size();
-
-        config_file.getline(buffer, MAX_CHARS); 
-
-        // this part picks up the packet transmissions
-        while ( std::string(buffer) != std::string("-1") ) {
-            //std::cout << buffer << std::endl;
-            config.push_back(std::string(buffer));
-            packet_moves.push_back(std::string(buffer));
-            config_file.getline(buffer, MAX_CHARS); 
-        }
-
-        transmissions = packet_moves.size();
-
-        config_file.close();
-
-        return 0;
-    }
+    int read_config (std::string filename);
 
     int print_config () {
 
@@ -214,5 +185,6 @@ int initialize_router(int data);
 int send_message (int conn, Message msg);
 std::string printable_msg (Message msg);
 std::string translate_signal (int signal);
+Connection create_connection (std::vector<std::string> c);
 
 #endif

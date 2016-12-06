@@ -19,8 +19,8 @@
 #include <sys/wait.h>
 
 // SPECIFIC HEADERS /////////////////////////
-#include "project3.h"
 #include "core.h"
+#include "project3.h"
 
 using namespace std;
 
@@ -131,14 +131,21 @@ int main (int argc, char* argv[]) {
             router_ports.at(router) = udp_port;
 
 
-            // send connectivity table to router
-            
-            // test
-            send_short(connection, 1);           // connections to follow 
-
-            send_short(connection, 1);           // neighbor 
-            send_short(connection, 40);          // cost
+            // send connectivity table to routers
+           
+            // get connections from Network object
+            vector<Connection> links = network.get_connections_for_node(router);
  
+            // connections to follow 
+            send_short(connection, (unsigned short)links.size()); 
+
+            for ( Connection c : links ) {
+                send_short(connection, c.dst_id);      // neighbor 
+                send_short(connection, c.cost);          // cost
+            }
+
+            logfile << timestamp() << "Router " << router << 
+                       " given local connectivity table..." << endl;
         }
 
     }
@@ -147,7 +154,15 @@ int main (int argc, char* argv[]) {
     // do main work depending on client or router
     if ( parent_pid == (long)getpid() ) {
         
-        // router processes are created, let them know they can build routing tables
+        // TODO: send_udp_lookup_table();
+        // for ( int router_fd : router_connections ) {
+        //     send_udp_lookup_table(router_fd, router_ports);
+        // }
+        // TODO: Activate receiving code in router process
+
+        // routers have been given connectivity tables
+        // routers have been given UDP port lookup table
+        // now let them know they can build routing tables
         cout << "Router creation complete... Building tables..." << endl;
         logfile << log_entry(string("Router creation complete... Building tables..."));
         for ( int router : routers ) {

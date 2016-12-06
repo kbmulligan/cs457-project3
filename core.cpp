@@ -384,3 +384,9 @@ vector<string> split_string (string input) {
 
     return tokens;
 }
+
+void send_connection_data (int socketfd, Connection c) {
+
+    ;
+
+}
