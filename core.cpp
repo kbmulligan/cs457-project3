@@ -34,6 +34,7 @@ using namespace std;
 
 // FUNCTIONS //////////////////////////////////////////////
 int send_message (int conn, Message msg);
+Message get_message (int conn);
 
 string get_ip () {
  
@@ -336,7 +337,7 @@ int talk_to_client (int connectedfd) {
     return 0;
 }
 
-// send message
+// send message sends 3 shorts that make up a message
 int send_message (int conn, Message msg) {
 
     send_short(conn, (unsigned short)msg.src_router);
@@ -346,8 +347,40 @@ int send_message (int conn, Message msg) {
     return 0;
 }
 
+// get message reads 3 shorts that make up a message
+Message get_message (int conn) {
+
+    unsigned short src = read_short(conn);
+    unsigned short dst = read_short(conn);
+    unsigned short msg = read_short(conn);
+
+    Message m;
+    m.src_router = src;
+    m.dst_router = dst;
+    m.message = msg;
+
+    return m;
+}
+
 string printable_msg (Message msg) {
     return  "SRC:" + to_string(msg.src_router) + " " + 
             "DST:" + to_string(msg.dst_router) + " " + 
             "MSG:" + to_string(msg.message);
+}
+
+string translate_signal (int signal) {
+    return to_string(signal);
+}
+
+vector<string> split_string (string input) {
+    vector<string> tokens;
+
+    stringstream ss(input);
+    string buffer;
+
+    while (ss << buffer) {
+        tokens.push_back(buffer);
+    }
+
+    return tokens;
 }

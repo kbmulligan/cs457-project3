@@ -39,5 +39,7 @@ int connect_to (int portreq);
 int talk_to_client (int connectedfd);
 
 
+std::vector<std::string> split_string (std::string input);
+
 #endif
 

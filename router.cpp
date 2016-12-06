@@ -65,7 +65,8 @@ int initialize_router (int data) {
 
     // wait for go msg from manager
     short signal = read_short(manager_cfd);
-    cout << "Router received Signal: " << signal << endl;
+    cout << "Router(" << id << ") received signal: " 
+         << translate_signal(signal) << endl;
 
     // send link request to neighbors
 

@@ -69,7 +69,9 @@ int main (int argc, char* argv[]) {
     int router_count = network.get_nodes();
 
     // create routers 
-    vector<int> routers(router_count, DEFAULT_ID);
+    vector<int> routers(router_count, DEFAULT_ID);         // ids
+    vector<int> router_ports(router_count, 0);             // udp port
+    vector<int> router_connections (router_count, 0);      // management port
 
     // label routers in range order from 0 to router_count - 1
     iota(routers.begin(), routers.end(), ROUTER_LABEL_START);
@@ -99,7 +101,8 @@ int main (int argc, char* argv[]) {
                 cout << "I'm the parent!" << endl;
             }
             cout << "Router " << router << " created, with pid: " << pid << endl;
-            logfile << timestamp() << "Router " << router << " created, with pid: " << pid << endl;
+            logfile << timestamp() << "Router " << router << 
+                       " created, with pid: " << pid << endl;
 
             // track child pid
             router_pids.push_back(pid);
@@ -112,7 +115,9 @@ int main (int argc, char* argv[]) {
             logfile << timestamp() << string("Listening on TCP port: ") <<
                                   to_string(listen_port) << endl;
 
-            int connection = start_listening_TCP (listen_port);
+            router_connections.at(router) = start_listening_TCP (listen_port);
+            int connection = router_connections.at(router);
+            
 
             // get connection
             logfile << timestamp() << string("Received connection from socket: ") << 
@@ -123,41 +128,49 @@ int main (int argc, char* argv[]) {
             cout << "Connected router is listening on UDP port: " << udp_port << endl;
 
 
-            // TODO: add UDP port data to directory
-
-
+            // add UDP port data to directory
+            router_ports.at(router) = udp_port;
 
         }
 
     }
 
 
-
-    // TODO
-    // router processes are created, let them know they can build routing tables
-    for ( int router : routers ) {
-        // send_message(connection, build_msg);
-        logfile << timestamp() << "Router " << router << " instructed to build table..." << endl;
-    }
-
-
-
-
     // do main work depending on client or router
     if ( parent_pid == (long)getpid() ) {
-        cout << "Router creation complete... Starting packet routing..." << endl;
-        logfile << log_entry(string("Router creation complete... Starting packet routing..."));
+        
+        // router processes are created, let them know they can build routing tables
+        cout << "Router creation complete... Building tables..." << endl;
+        logfile << log_entry(string("Router creation complete... Building tables..."));
+        for ( int router : routers ) {
+            int connection = router_connections.at(router);
+            send_short(connection, TABLE_BUILD);
+            // send_message(connection, TABLE_BUILD);
+            logfile << timestamp() << "Router " << router << 
+                       " instructed to build table..." << endl;
+        }
+
+        // delay to give routers time to build
+        sleep(BUILD_DELAY);
+
+        cout << "Tables complete... Starting packet routing..." << endl;
+        logfile << endl 
+                << log_entry(string("Tables complete... Starting packet routing..."));
 
         // do packet spawning .........
 
         vector<string> packets = network.get_packets(); 
         for (string s : packets) {
-            cout << "Transmitting packet: " << s << endl;
+            vector<string> info = split_string(s);
+                        
+            cout << "Transmitting packet: " 
+                 << info[0] << " to " << info[1] << endl;
             logfile << log_entry("Transmitting packet: " + s);
 
             // tell src router to send packet to dst
         }
 
+        sleep(TRANSMISSION_DELAY);
 
     }
 
