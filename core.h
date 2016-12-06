@@ -30,6 +30,9 @@ int send_short (int connectionfd, short data);
 std::string read_string (int connectionfd, int string_len);
 int send_string (int connectionfd, std::string str);
 
+int read_udp_data (int sockfd);
+int send_udp_data (unsigned short port, unsigned short data);
+
 std::fstream open_logfile (std::string fn);
 
 int start_listening_TCP (int portreq);

@@ -266,7 +266,7 @@ int start_listening (int portreq, int type) {
     // UDP-ONLY STUFF 
     else {
         //cout << "UDP listening on " << get_ip() << " : " << port << endl;
-        returninfo = portreq;
+        returninfo = sockfd;
     }
     
     freeaddrinfo(res);
@@ -389,4 +389,64 @@ void send_connection_data (int socketfd, Connection c) {
 
     ;
 
+}
+
+int send_udp_short (unsigned short data) {
+    return 0;
+}
+
+unsigned short read_udp_short (void) {
+    unsigned short data = -1;
+
+
+
+
+    return data;
+}
+
+int read_udp_data (int sockfd) {
+
+    const int MAX_BYTES = 128;
+    char buffer[MAX_BYTES];
+    unsigned int flags = 0;
+    struct sockaddr *from = NULL;
+    socklen_t *fromlen = NULL;
+
+    recvfrom(sockfd, buffer, MAX_BYTES, flags, from, fromlen);
+
+    cout << "read_udp_data: " << endl;    
+    cout << buffer << endl;
+
+    return 0;
+}
+
+int send_udp_data (unsigned short port, unsigned short data) {
+
+    unsigned int flags = 0;
+    struct sockaddr *to = NULL;
+    //socklen_t *tolen = NULL;
+
+    struct addrinfo *servinfo;
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_flags = AI_PASSIVE; 
+
+    int status = getaddrinfo(NULL, to_string(port).c_str(), &hints, &servinfo);
+    if (status != 0) {
+        cerr << "send_udp_data: getaddrinfo error" << endl;
+    }
+
+    int sockfd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
+    if (sockfd == -1) {
+        cerr << "send_udp_data: socket error" << endl;
+    }
+
+    int bytes_sent = sendto(sockfd, &data, sizeof(data), flags, to, sizeof(*to));
+
+    cout << "send_udp_data: " << data << endl;    
+    cout << "send_udp_data: " << bytes_sent << " bytes sent" << endl;
+
+    return 0;
 }

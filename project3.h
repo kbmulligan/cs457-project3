@@ -14,6 +14,7 @@
 #include <iostream>
 
 // CONSTANTS ///////////////////////////////
+const int ROUTER_LABEL_START = 0;
 const int start_port_manager = 48000;
 const int start_port_router = 49000;
 const int DEFAULT_ID = 1;
@@ -100,6 +101,24 @@ public:
     std::vector<int> get_ports() {
         return ports;
     }
+
+    int get_cost_for_neighbor (int nid) {
+        int n_index = -1;        // find index of nid
+        for (unsigned int i = 0; i < neighbor_connections.size(); i++) {
+            if (neighbor_connections.at(i).dst_id == nid) {
+                n_index = i;
+                break;
+            }
+        }
+ 
+        int n_cost = costs.at(n_index);        // get costs at index
+        return n_cost;
+    }
+
+    int get_port_for_neighbor (int nid) {
+        return nid + start_port_router;
+    }
+
  
 };
 
@@ -186,5 +205,6 @@ int send_message (int conn, Message msg);
 std::string printable_msg (Message msg);
 std::string translate_signal (int signal);
 Connection create_connection (std::vector<std::string> c);
+Connection reverse_connection (Connection c);
 
 #endif

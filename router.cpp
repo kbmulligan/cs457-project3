@@ -31,8 +31,9 @@ int initialize_router (int data) {
     logfile << timestamp() << "Router logfile opened for router: " << id << endl; 
 
     // create UDP port and listen
-    unsigned short port = (unsigned short)start_listening_UDP (start_port_router + id);    
-    logfile << timestamp() << "Router listening on port: " << port << endl;
+    int p = start_port_router + id;
+    int sockfd = (unsigned short)start_listening_UDP(p);    
+    logfile << timestamp() << "Router listening on port: " << p << endl;
 
 
     // artificially wait so that the manager will be ready
@@ -47,8 +48,8 @@ int initialize_router (int data) {
 
     // send UDP port number and request node address and connectivity table
     //cout << "Router " << id << " sending data: " << port << endl;
-    logfile << timestamp() << "Router sending data to manager: " << port << endl;
-    send_short(manager_cfd, port);
+    logfile << timestamp() << "Router sending data to manager: " << p << endl;
+    send_short(manager_cfd, p);
 
     // wait for info from manager
     // read connectivity table
@@ -60,11 +61,13 @@ int initialize_router (int data) {
         router.add_neighbor((int)nid, (int)cost, 0);
     }
 
+    // print connectivity table
     logfile << timestamp() << "Connectivitng table:" << endl;
     for (unsigned int i = 0; i < router.get_neighbors().size(); i++) {
-        logfile << "ID: " << router.get_neighbors()[i]
-                << " Cost: " << router.get_costs()[i] 
-                << " Port: " << router.get_ports()[i] << endl;
+        int id = router.get_neighbors()[i];
+        logfile << "ID: " << id 
+                << " Cost: " << router.get_cost_for_neighbor(id)
+                << " Port: " << router.get_port_for_neighbor(id) << endl;
     }
 
     // send ready msg
@@ -82,9 +85,23 @@ int initialize_router (int data) {
          << translate_signal(signal) << endl;
 
     // send link request to neighbors
-
+    
+    logfile << timestamp() << "Sending Hello's to neighbors..." << endl;
+    for (int n : router.get_neighbors()) {
+        send_udp_data(router.get_port_for_neighbor(n), 1);
+        logfile << timestamp() << "data sent to " << n << " from " << id << endl;
+    }
+    
 
     // receive all ACKs from neighbors
+
+    logfile << timestamp() << "Waiting for ACKs from neighbors..." << endl;
+    for (int n : router.get_neighbors()) {
+        read_udp_data(sockfd);
+        cout << "recevied from " << n << endl;
+    }
+
+
 
     // tell manager all connections are good
 

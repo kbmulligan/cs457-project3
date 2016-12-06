@@ -32,10 +32,10 @@ void print_config (vector<string> config);
 int wait_for_children (vector<pid_t> pids);
 
 int start_router (int id);
+int send_udp_lookup_table(int fd, vector<int> router_ports);
 
 // CONSTANTS ///////////////////////////////
 const int ARGS = 2;
-const int ROUTER_LABEL_START = 0;
 
 ////////////////////////////////////////////
 int main (int argc, char* argv[]) {
@@ -140,7 +140,7 @@ int main (int argc, char* argv[]) {
             send_short(connection, (unsigned short)links.size()); 
 
             for ( Connection c : links ) {
-                send_short(connection, c.dst_id);      // neighbor 
+                send_short(connection, c.dst_id);        // neighbor 
                 send_short(connection, c.cost);          // cost
             }
 
@@ -327,3 +327,12 @@ int start_router (int data) {
     return 0;
 }
 
+// sends UDP router ports in router order from first to last
+int send_udp_lookup_table(int fd, vector<int> router_ports) {
+
+    for (int port : router_ports) {
+        send_short(fd, (unsigned short)port);
+    } 
+
+    return 0;
+}

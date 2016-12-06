@@ -41,15 +41,18 @@ int Network::read_config (string filename) {
     while ( string(buffer) != string("-1") ) {
         config.push_back(string(buffer));
         connections.push_back(string(buffer));
-        links.push_back( create_connection(split_string(string(buffer))) );
+
+        Connection c = create_connection(split_string(string(buffer)));
+        links.push_back(c);                     // add connection
+        links.push_back(reverse_connection(c)); // add reverse connection also
+
         config_file.getline(buffer, MAX_CHARS); 
-        
     }
 
-    nodes = stoi(config[0]);
+    nodes = stoi(config[0]);                   // get number nodes in network
 
-    connections.erase(connections.begin());
-    edges = connections.size();
+    connections.erase(connections.begin());    // remove first line (num nodes)
+    edges = connections.size();                // calc number of edges
 
     config_file.getline(buffer, MAX_CHARS); 
 
@@ -71,7 +74,6 @@ int Network::read_config (string filename) {
 // FUNCTIONS
 Connection create_connection (vector<string> c) {
 
-
     Connection conn;
 
     if (c.size() != ITEMS_IN_CONNECTION) {
@@ -88,4 +90,13 @@ Connection create_connection (vector<string> c) {
     }
 
     return conn;
+}
+
+Connection reverse_connection (Connection c) {
+    Connection reversed;
+    reversed.src_id = c.dst_id;
+    reversed.dst_id = c.src_id;
+    reversed.cost = c.cost;
+
+    return reversed;
 }
