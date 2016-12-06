@@ -378,7 +378,7 @@ vector<string> split_string (string input) {
     stringstream ss(input);
     string buffer;
 
-    while (ss << buffer) {
+    while (ss >> buffer) {
         tokens.push_back(buffer);
     }
 
