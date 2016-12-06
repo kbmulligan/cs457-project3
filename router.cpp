@@ -24,6 +24,7 @@ int initialize_router (int data) {
     int id = data;
 
     //cout << "Router iniitialized from router.cpp ... " << id << endl;
+    Router router(id);
 
     string log_fn = logfile_prefix + to_string(id) + logfile_suffix;
     fstream logfile = open_logfile(log_fn);
@@ -50,9 +51,21 @@ int initialize_router (int data) {
     send_short(manager_cfd, port);
 
     // wait for info from manager
-    
+    // read connectivity table
+    int n = read_short(manager_cfd);          // number of neighbors 
+    for (int i = 0; i < n; i++) {
+        unsigned short nid = read_short(manager_cfd);
+        unsigned short cost = read_short(manager_cfd);
 
+        router.add_neighbor((int)nid, (int)cost, 0);
+    }
 
+    logfile << timestamp() << "Connectivitng table:" << endl;
+    for (unsigned int i = 0; i < router.get_neighbors().size(); i++) {
+        logfile << "ID: " << router.get_neighbors()[i]
+                << " Cost: " << router.get_costs()[i] 
+                << " Port: " << router.get_ports()[i] << endl;
+    }
 
     // send ready msg
     Message msg;

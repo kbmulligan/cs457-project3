@@ -127,10 +127,18 @@ int main (int argc, char* argv[]) {
             unsigned short udp_port = read_short(connection);
             cout << "Connected router is listening on UDP port: " << udp_port << endl;
 
-
             // add UDP port data to directory
             router_ports.at(router) = udp_port;
 
+
+            // send connectivity table to router
+            
+            // test
+            send_short(connection, 1);           // connections to follow 
+
+            send_short(connection, 1);           // neighbor 
+            send_short(connection, 40);          // cost
+ 
         }
 
     }
@@ -162,12 +170,15 @@ int main (int argc, char* argv[]) {
         vector<string> packets = network.get_packets(); 
         for (string s : packets) {
             vector<string> info = split_string(s);
-                        
-            cout << "Transmitting packet: " 
+             
+            cout << "Transmitting packet from router " 
                  << info[0] << " to " << info[1] << endl;
-            logfile << log_entry("Transmitting packet: " + s);
+            logfile << timestamp()
+                    << "Transmitting packet from router " 
+                    << info[0] << " to " << info[1] << endl;
 
             // tell src router to send packet to dst
+            
         }
 
         sleep(TRANSMISSION_DELAY);
@@ -276,7 +287,9 @@ int wait_for_children (vector<pid_t> pids) {
                         break;
                 }
             } else {
-                cout << "Process completed: " << finished << ", " << pid << endl;
+                if (VERBOSE) {
+                    cout << "Process completed: " << finished << ", " << pid << endl;
+                }
             }
 
         }

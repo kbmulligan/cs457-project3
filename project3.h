@@ -76,6 +76,14 @@ public:
     std::vector<int> get_neighbors() {
         return neighbors;
     }
+
+    std::vector<int> get_costs() {
+        return costs;
+    }
+
+    std::vector<int> get_ports() {
+        return ports;
+    }
  
 };
 
