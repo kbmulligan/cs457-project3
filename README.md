@@ -2,13 +2,13 @@
 Simulating a Link State Routing Protocol
 
 ## Installation
-`git clone
-`make
+`git clone`
+`make`
 
 ## Usage
-`./manager <NETWORKCONFIGFILE>
+`./manager <NETWORKCONFIGFILE>`
 
-After running the manager with a given config file, the program generates logs with names of <component>.out where component is manager or router<ID>. 
+After running the manager with a given config file, the program generates logs with names of component.out where component is manager or routerID. 
 
 The manager reads the config file and creates child processes for each router in the simulation. The child processes receives their router ID then make a connection with the manager over TCP. This is their control mechanism for the simulation. They open a UDP port to simulate their connection to the network. The manager gives the whole UDP port mapping for each router to every other router. However, the routers are only able to communicate with those they're connectect to in accordance with the config file.
 
