@@ -62,7 +62,7 @@ int initialize_router (int data) {
     }
 
     // print connectivity table
-    logfile << timestamp() << "Connectivitng table:" << endl;
+    logfile << timestamp() << "Connectivity table:" << endl;
     for (unsigned int i = 0; i < router.get_neighbors().size(); i++) {
         int id = router.get_neighbors()[i];
         logfile << "ID: " << id 
@@ -77,19 +77,26 @@ int initialize_router (int data) {
     msg.message = READY;
 
     logfile << timestamp() << "Router sending message: " << printable_msg(msg) << endl;
-    send_message(manager_cfd, msg);
+    send_message_tcp(manager_cfd, msg);
 
-    // wait for go msg from manager
+    // wait for go build table msg from manager
     short signal = read_short(manager_cfd);
-    cout << "Router(" << id << ") received signal: " 
-         << translate_signal(signal) << endl;
+    logfile << timestamp() << "Router(" << id << ") received signal: " 
+            << translate_signal(signal) << endl;
 
     // send link request to neighbors
     
     logfile << timestamp() << "Sending Hello's to neighbors..." << endl;
     for (int n : router.get_neighbors()) {
-        send_udp_data(router.get_port_for_neighbor(n), 1);
-        logfile << timestamp() << "data sent to " << n << " from " << id << endl;
+        unsigned short port = router.get_port_for_neighbor(n);
+ 
+        Message msg;
+        msg.src_router = id;
+        msg.dst_router = n;
+        msg.message = HELLO;
+
+        send_message_udp(port, msg);
+        logfile << timestamp() << "HELLO MSG sent from " << id << " to " << n << endl;
     }
     
 
@@ -97,13 +104,22 @@ int initialize_router (int data) {
 
     logfile << timestamp() << "Waiting for ACKs from neighbors..." << endl;
     for (int n : router.get_neighbors()) {
-        read_udp_data(sockfd);
-        cout << "recevied from " << n << endl;
+        Message msg = get_message_udp(sockfd);
+
+        //cout << "Router " << id <<  ", received data: " 
+        //     << printable_msg(msg)
+        //     << " expecting data from " << n << endl;
+
+        logfile << timestamp() << n << " Received: " << printable_msg(msg) << endl;
     }
+    logfile << timestamp() << "Received all expected HELLOs from neighbors..." << endl;
 
-
-
-    // tell manager all connections are good
+    // tell manager all local connections are good
+    Message goodcon;
+    goodcon.src_router = id;
+    goodcon.dst_router = MANAGER_ID;
+    goodcon.message = GOOD_CONN;
+    send_message_tcp(manager_cfd, goodcon);
 
 
     // wait for network is up msg
@@ -120,7 +136,46 @@ int initialize_router (int data) {
 
     // update forwarding table
 
-    
+    logfile << timestamp() << endl;
+    logfile << "Gateways/Connectivity Table" << endl;
+    logfile << router.get_gateways();
+
+
+    // wait for packet instructions
+    // exit when quit message received
+    Message latest = get_message_udp(sockfd);
+    while (latest.message != QUIT) {
+        logfile << timestamp() << "Router received message: " 
+                << printable_msg(latest) << endl; 
+
+        if (latest.message == TEST_PACKET && latest.dst_router != id) {
+
+            int next_hop = router.get_next_hop(latest.dst_router);
+            if (next_hop == -1) {
+                logfile << timestamp() << "Unable to forward packet(hop): "
+                        << "Router not in connectivity table -- " 
+                        << printable_msg(latest) << endl;
+            }
+
+            unsigned short dstport = router.get_port_for_neighbor(next_hop);
+            if (dstport != 0) {
+                send_message_udp(dstport, latest);
+                logfile << timestamp() << "Packet sent from " << id
+                        << " to " << latest.dst_router << endl;
+            } else {
+                logfile << timestamp() << "Unable to forward packet(port): "
+                        << "Router not in connectivity table -- " 
+                        << printable_msg(latest) << endl;
+                        
+            }
+        } else if (latest.dst_router == id) {
+            logfile << timestamp() << "PACKET RECEIVED! Packet was for me! " << endl;
+        }       
+         
+        latest = get_message_udp(sockfd);
+    }
+    logfile << timestamp() << "Router received QUIT message... " << endl; 
+
     logfile << log_entry("Routing complete!"); 
     logfile.close(); 
 

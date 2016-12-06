@@ -33,8 +33,6 @@ using namespace std;
 
 
 // FUNCTIONS //////////////////////////////////////////////
-int send_message (int conn, Message msg);
-Message get_message (int conn);
 
 string get_ip () {
  
@@ -337,30 +335,7 @@ int talk_to_client (int connectedfd) {
     return 0;
 }
 
-// send message sends 3 shorts that make up a message
-int send_message (int conn, Message msg) {
 
-    send_short(conn, (unsigned short)msg.src_router);
-    send_short(conn, (unsigned short)msg.dst_router);
-    send_short(conn, (unsigned short)msg.message);
-
-    return 0;
-}
-
-// get message reads 3 shorts that make up a message
-Message get_message (int conn) {
-
-    unsigned short src = read_short(conn);
-    unsigned short dst = read_short(conn);
-    unsigned short msg = read_short(conn);
-
-    Message m;
-    m.src_router = src;
-    m.dst_router = dst;
-    m.message = msg;
-
-    return m;
-}
 
 string printable_msg (Message msg) {
     return  "SRC:" + to_string(msg.src_router) + " " + 
@@ -391,39 +366,58 @@ void send_connection_data (int socketfd, Connection c) {
 
 }
 
-int send_udp_short (unsigned short data) {
+int send_udp_short (unsigned short port, short data) {
+    
+
+    //cout << "Sending (h): " << data << endl;
+
+    short datasend = htons(data);                     // network byte order
+
+    //cout << "Sending (n): " << datasend << endl;
+
+    send_udp_data(port, &datasend, sizeof(datasend)); 
+
     return 0;
 }
 
-unsigned short read_udp_short (void) {
+unsigned short read_udp_short (int sockfd) {
     unsigned short data = -1;
 
+    short buffer = 0;
+    
+    read_udp_data(sockfd, (void *)&buffer, sizeof(buffer));
 
-
+    //data = *(unsigned short *)buffer;
+    memcpy((void *)&data, (void *)&buffer, sizeof(data));
+    data = ntohs(data);                     // host bytes order
 
     return data;
 }
 
-int read_udp_data (int sockfd) {
+int read_udp_data (int sockfd, void* buffer, int buflen) {
 
-    const int MAX_BYTES = 128;
-    char buffer[MAX_BYTES];
+    // const int MAX_BYTES = 128;
+    // char buffer[MAX_BYTES];
     unsigned int flags = 0;
     struct sockaddr *from = NULL;
     socklen_t *fromlen = NULL;
 
-    recvfrom(sockfd, buffer, MAX_BYTES, flags, from, fromlen);
+    int bytes_read = recvfrom(sockfd, buffer, buflen, flags, from, fromlen);
+    if (bytes_read < buflen) {
+        cerr << "read_udp_data: not all data read" << endl;
+    }
+    //cout << "read_udp_data: " << buffer << " (" << bytes_read << ")" << endl;
+    //cout << "read_udp_data: " << ((char *)buffer)[0] << ((char *)buffer)[1] << endl;
 
-    cout << "read_udp_data: " << endl;    
-    cout << buffer << endl;
-
+    
     return 0;
 }
 
-int send_udp_data (unsigned short port, unsigned short data) {
+// this function cheats and uses the first struct returned by getaddrinfo
+int send_udp_data (unsigned short port, void* data, int datalen) {
 
     unsigned int flags = 0;
-    struct sockaddr *to = NULL;
+    //struct sockaddr *to = NULL;
     //socklen_t *tolen = NULL;
 
     struct addrinfo *servinfo;
@@ -438,15 +432,21 @@ int send_udp_data (unsigned short port, unsigned short data) {
         cerr << "send_udp_data: getaddrinfo error" << endl;
     }
 
-    int sockfd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
+    int sockfd = socket(servinfo->ai_family, 
+                        servinfo->ai_socktype, 
+                        servinfo->ai_protocol);
     if (sockfd == -1) {
         cerr << "send_udp_data: socket error" << endl;
     }
 
-    int bytes_sent = sendto(sockfd, &data, sizeof(data), flags, to, sizeof(*to));
+    int bytes_sent = sendto(sockfd, data, datalen, flags, 
+                            servinfo->ai_addr, servinfo->ai_addrlen);
 
-    cout << "send_udp_data: " << data << endl;    
-    cout << "send_udp_data: " << bytes_sent << " bytes sent" << endl;
+    if (bytes_sent < datalen) {
+        cerr << "send_udp_data: not all data sent" << endl;
+    }
+    //cout << "send_udp_data: " << *(short *)data << endl;    
+    //cout << "send_udp_data: " << bytes_sent << " bytes sent" << endl;
 
     return 0;
 }

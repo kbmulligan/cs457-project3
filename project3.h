@@ -9,9 +9,11 @@
 #define PROJECT3HEADER
 
 #include <vector>
+#include <map>
 #include <string>
 #include <fstream>
 #include <iostream>
+#include <algorithm>
 
 // CONSTANTS ///////////////////////////////
 const int ROUTER_LABEL_START = 0;
@@ -35,13 +37,17 @@ const int TRANSMISSION_DELAY = 1; // sec to wait for routers to send packets
 // 3 = quit
 // 4 = table update follows 
 // 5 = build table 
+// 6 = good local connections
+// 7 = test packet (USED FOR SIMULATED PACKETS) 
 // 99 = error 
 const int EMPTY = 0;
 const int READY = 1;
 const int HELLO = 2;
 const int QUIT = 3;
+const int GOOD_CONN = 6;
 const int TABLE_UPDATE = 4;
-const int TABLE_BUILD = 4;
+const int TABLE_BUILD = 5;
+const int TEST_PACKET = 7;
 const int ERROR = 99;
 
 // simple message packet format
@@ -67,6 +73,10 @@ class Router {
     std::vector<int> neighbors;
     std::vector<int> costs;
     std::vector<int> ports;
+    std::map<int,int> gateways;       // connectivity table
+                                     // contains best next-hop given 
+                                     // router id as index
+    std::map<int,int> global_cost;       // total costs 
 
 public:
     
@@ -84,6 +94,8 @@ public:
         n.dst_id = nid;
         n.cost = cost;
         neighbor_connections.push_back(n);
+
+        gateways[nid] = nid;
     }
 
     int get_id () {
@@ -115,10 +127,51 @@ public:
         return n_cost;
     }
 
+    int get_cost_for_dest (int dst) {
+        int total = 0;
+
+        return total;
+    }
+
     int get_port_for_neighbor (int nid) {
         return nid + start_port_router;
     }
 
+    int get_port_for_router (int rid) {
+        return rid + start_port_router;
+    }
+
+    int get_next_hop (int dst) {
+        int next = -1;
+
+        std::map<int,int>::iterator it = gateways.find(dst);
+        if (it != gateways.end()) {
+            next = gateways.at(dst);
+        } else {
+            next = -1;   
+        }
+
+        return next;
+    }
+
+    std::string get_gateways () {
+        std::string output;
+        output.append(std::string("Dest : Next Hop : Cost"));
+        output.append("\n");
+
+        for (std::map<int,int>::iterator it = gateways.begin(); 
+             it != gateways.end(); ++it) {
+            output.append(std::to_string(it->first));
+            output.append(std::string("    : ")); 
+            output.append(std::to_string(gateways.at(it->first)));
+            output.append(std::string(" "));
+            output.append(std::string("       : ")); 
+            output.append(std::to_string(get_cost_for_dest(it->first))); 
+            output.append("\n");
+        }
+
+        return output;
+    }
  
 };
 
@@ -206,5 +259,10 @@ std::string printable_msg (Message msg);
 std::string translate_signal (int signal);
 Connection create_connection (std::vector<std::string> c);
 Connection reverse_connection (Connection c);
+
+int send_message_tcp (int conn, Message msg);
+int send_message_udp (unsigned short port, Message msg);
+Message get_message_tcp (int conn);
+Message get_message_udp (int conn);
 
 #endif

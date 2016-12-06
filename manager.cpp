@@ -33,6 +33,8 @@ int wait_for_children (vector<pid_t> pids);
 
 int start_router (int id);
 int send_udp_lookup_table(int fd, vector<int> router_ports);
+void send_msg_all_tcp (vector<int> routers, vector<int> conns, int msg);
+void send_msg_all_udp (vector<int> routers, vector<int> ports, int msg);
 
 // CONSTANTS ///////////////////////////////
 const int ARGS = 2;
@@ -163,41 +165,86 @@ int main (int argc, char* argv[]) {
         // routers have been given connectivity tables
         // routers have been given UDP port lookup table
         // now let them know they can build routing tables
-        cout << "Router creation complete... Building tables..." << endl;
-        logfile << log_entry(string("Router creation complete... Building tables..."));
+        cout << "Router creation complete... " << endl;
+        logfile << log_entry(string("Router creation complete... "));
         for ( int router : routers ) {
             int connection = router_connections.at(router);
             send_short(connection, TABLE_BUILD);
-            // send_message(connection, TABLE_BUILD);
+            // send_message_tcp(connection, TABLE_BUILD);
             logfile << timestamp() << "Router " << router << 
                        " instructed to build table..." << endl;
         }
 
+        for ( int r : routers ) {
+            int connection = router_connections.at(r);
+            Message msg = get_message_tcp(connection);
+
+            // cout << printable_msg(msg) << endl;
+            if (msg.message == READY) { 
+                logfile << timestamp() << "Router " << r << 
+                           " reports READY..." << endl;
+            }
+        }
+        cout << "Routers reporting READY..." << endl;
+        logfile << log_entry(string("All routers reporting READY..."));
+
+        for ( int r : routers ) {
+            int connection = router_connections.at(r);
+            Message msg = get_message_tcp(connection);
+
+            // cout << printable_msg(msg) << endl;
+            if (msg.message == GOOD_CONN) { 
+                logfile << timestamp() << "Router " << r << 
+                           " reports good local connections..." << endl;
+            }
+        }
+        cout << "Routers reporting good connections..." << endl 
+             << "Building tables..." << endl;
+        logfile << log_entry(string("Routers report good connections..."))
+                << timestamp() << "Building tables..." << endl;
+
         // delay to give routers time to build
         sleep(BUILD_DELAY);
 
-        cout << "Tables complete... Starting packet routing..." << endl;
+        cout << "Tables complete..." << endl
+             << "Starting packet routing..." << endl;
         logfile << endl 
-                << log_entry(string("Tables complete... Starting packet routing..."));
+                << log_entry(string("Tables complete..."))
+                << timestamp() << "Starting packet routing..." << endl;
 
         // do packet spawning .........
 
         vector<string> packets = network.get_packets(); 
         for (string s : packets) {
             vector<string> info = split_string(s);
+
+            int src = stoi(info[0]);
+            int dst = stoi(info[1]);
              
             cout << "Transmitting packet from router " 
-                 << info[0] << " to " << info[1] << endl;
+                 << src << " to " << dst << endl;
             logfile << timestamp()
                     << "Transmitting packet from router " 
-                    << info[0] << " to " << info[1] << endl;
+                    << src << " to " << dst << endl;
 
             // tell src router to send packet to dst
+            Message sendpacket;
+            sendpacket.src_router = src;
+            sendpacket.dst_router = dst;
+            sendpacket.message = TEST_PACKET;
+ 
+            send_message_udp(router_ports.at(src), sendpacket);
             
         }
 
         sleep(TRANSMISSION_DELAY);
 
+
+        // send QUIT to all routers
+        logfile << timestamp()
+                << "Sending QUIT signal to all routers..." << endl;
+
+        send_msg_all_udp(routers, router_ports, QUIT);
     }
 
 
@@ -221,6 +268,36 @@ int main (int argc, char* argv[]) {
 
 void usage (int argc, char* argv[]) {
     cout << "Usage: " << argv[0] << " <input file>" << endl;
+}
+
+void send_msg_all_tcp (vector<int> routers, vector<int> conns, int msg) {
+
+    Message m;
+    m.src_router = -1;
+    m.dst_router = -1;
+    m.message = msg;
+
+    for ( int r : routers ) {
+            int c = conns.at(r);
+            send_message_tcp(c, m);
+    }
+
+    return;
+}
+
+void send_msg_all_udp (vector<int> routers, vector<int> ports, int msg) {
+
+    Message m;
+    m.src_router = -1;
+    m.dst_router = -1;
+    m.message = msg;
+
+    for ( int r : routers ) {
+            int c = ports.at(r);
+            send_message_udp(c, m);
+    }
+
+    return;
 }
 
 vector<string> read_network_config(string fn) {

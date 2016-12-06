@@ -30,8 +30,10 @@ int send_short (int connectionfd, short data);
 std::string read_string (int connectionfd, int string_len);
 int send_string (int connectionfd, std::string str);
 
-int read_udp_data (int sockfd);
-int send_udp_data (unsigned short port, unsigned short data);
+int read_udp_data (int sockfd, void* buffer, int buflen);
+int send_udp_data (unsigned short port, void* data, int datalen);
+unsigned short read_udp_short (int sockfd);
+int send_udp_short (unsigned short port, short data);
 
 std::fstream open_logfile (std::string fn);
 
