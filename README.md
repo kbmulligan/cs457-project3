@@ -2,8 +2,10 @@
 Simulating a Link State Routing Protocol
 
 ## Installation
-1. `git clone`
-2. `make`
+```
+git clone
+make
+```
 
 ## Usage
 `./manager <NETWORKCONFIGFILE>`
