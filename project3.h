@@ -35,16 +35,18 @@ const int TRANSMISSION_DELAY = 1; // sec to wait for routers to send packets
 // 1 = ready
 // 2 = default / hello
 // 3 = quit
-// 4 = table update follows 
+// 4 = table update follows (LSP)
 // 5 = build table 
 // 6 = good local connections
 // 7 = test packet (USED FOR SIMULATED PACKETS) 
+// 8 = good global connectivity (entries for all routers in tabl)
 // 99 = error 
 const int EMPTY = 0;
 const int READY = 1;
 const int HELLO = 2;
 const int QUIT = 3;
 const int GOOD_CONN = 6;
+const int GOOD_TABLE = 8;
 const int TABLE_UPDATE = 4;
 const int TABLE_BUILD = 5;
 const int TEST_PACKET = 7;
@@ -96,6 +98,23 @@ public:
         neighbor_connections.push_back(n);
 
         gateways[nid] = nid;
+        global_cost[nid] = cost;
+    }
+
+    void add_connection (int nid, int cost, int gateway) {
+        
+        // check current connectivity table for destination id
+   
+
+
+        // compare costs
+
+
+
+        // used this connection if cheaper
+
+
+        return;
     }
 
     int get_id () {
@@ -128,7 +147,12 @@ public:
     }
 
     int get_cost_for_dest (int dst) {
-        int total = 0;
+        int total = 99;
+
+        std::map<int,int>::iterator it = global_cost.find(dst);
+        if (it != gateways.end()) {
+            total = global_cost.at(dst);
+        }
 
         return total;
     }

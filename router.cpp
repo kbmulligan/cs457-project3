@@ -51,6 +51,12 @@ int initialize_router (int data) {
     logfile << timestamp() << "Router sending data to manager: " << p << endl;
     send_short(manager_cfd, p);
 
+    // read number of total routers in network
+    int num_routers = read_short(manager_cfd);          // number of routers 
+    logfile << timestamp() << "Router knows there are " 
+            << num_routers << " routers in the network." << endl;
+    
+
     // wait for info from manager
     // read connectivity table
     int n = read_short(manager_cfd);          // number of neighbors 
@@ -76,7 +82,8 @@ int initialize_router (int data) {
     msg.dst_router = MANAGER_ID;    
     msg.message = READY;
 
-    logfile << timestamp() << "Router sending message: " << printable_msg(msg) << endl;
+    logfile << timestamp() << "Router sending message: " 
+            << printable_msg(msg) << endl;
     send_message_tcp(manager_cfd, msg);
 
     // wait for go build table msg from manager
@@ -96,7 +103,8 @@ int initialize_router (int data) {
         msg.message = HELLO;
 
         send_message_udp(port, msg);
-        logfile << timestamp() << "HELLO MSG sent from " << id << " to " << n << endl;
+        logfile << timestamp() << "HELLO MSG sent from " << id 
+                << " to " << n << endl;
     }
     
 
@@ -112,7 +120,8 @@ int initialize_router (int data) {
 
         logfile << timestamp() << n << " Received: " << printable_msg(msg) << endl;
     }
-    logfile << timestamp() << "Received all expected HELLOs from neighbors..." << endl;
+    logfile << timestamp() << "Received all expected HELLOs from neighbors..." 
+            << endl;
 
     // tell manager all local connections are good
     Message goodcon;
@@ -123,6 +132,11 @@ int initialize_router (int data) {
 
 
     // wait for network is up msg
+    Message goodglobal;
+    goodglobal.src_router = id;
+    goodglobal.dst_router = MANAGER_ID;
+    goodglobal.message = GOOD_TABLE;
+    send_message_tcp(manager_cfd, goodglobal);
 
 
     // send LSP to neighbors

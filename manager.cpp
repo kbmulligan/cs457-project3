@@ -122,25 +122,30 @@ int main (int argc, char* argv[]) {
             
 
             // get connection
-            logfile << timestamp() << string("Received connection from socket: ") << 
-                                  to_string(connection) << endl;
+            logfile << timestamp() << string("Received connection from socket: ") 
+                    << to_string(connection) << endl;
 
             // read UDP port for connecting router
             unsigned short udp_port = read_short(connection);
-            cout << "Connected router is listening on UDP port: " << udp_port << endl;
+            cout << "Connected router is listening on UDP port: " 
+                 << udp_port << endl;
 
             // add UDP port data to directory
             router_ports.at(router) = udp_port;
 
+            // send number of routers in network 
+            send_short(connection, (short)network.get_nodes()); 
+            logfile << timestamp() << "Router " << router << 
+                       " given total number of routers..." << endl;
 
-            // send connectivity table to routers
-           
+            // send local connectivity table to routers
             // get connections from Network object
             vector<Connection> links = network.get_connections_for_node(router);
  
-            // connections to follow 
+            // send number of connections to follow 
             send_short(connection, (unsigned short)links.size()); 
 
+            // send connections
             for ( Connection c : links ) {
                 send_short(connection, c.dst_id);        // neighbor 
                 send_short(connection, c.cost);          // cost
@@ -203,17 +208,35 @@ int main (int argc, char* argv[]) {
         logfile << log_entry(string("Routers report good connections..."))
                 << timestamp() << "Building tables..." << endl;
 
+
+
+
+
         // delay to give routers time to build
         sleep(BUILD_DELAY);
 
+        // query for good tables
+        for ( int r : routers ) {
+            int connection = router_connections.at(r);
+            Message msg = get_message_tcp(connection);
+
+            // cout << printable_msg(msg) << endl;
+            if (msg.message == GOOD_TABLE) { 
+                logfile << timestamp() << "Router " << r << 
+                           " reports good connectivity table..." << endl;
+            }
+        }
+
+        // log good tables
         cout << "Tables complete..." << endl
              << "Starting packet routing..." << endl;
         logfile << endl 
                 << log_entry(string("Tables complete..."))
                 << timestamp() << "Starting packet routing..." << endl;
 
-        // do packet spawning .........
 
+        // everything is stable and ready
+        // do packet spawning .........
         vector<string> packets = network.get_packets(); 
         for (string s : packets) {
             vector<string> info = split_string(s);
@@ -221,10 +244,10 @@ int main (int argc, char* argv[]) {
             int src = stoi(info[0]);
             int dst = stoi(info[1]);
              
-            cout << "Transmitting packet from router " 
+            cout << "Directing packet transmission from router " 
                  << src << " to " << dst << endl;
             logfile << timestamp()
-                    << "Transmitting packet from router " 
+                    << "Directing packet transmission from router " 
                     << src << " to " << dst << endl;
 
             // tell src router to send packet to dst
@@ -259,7 +282,7 @@ int main (int argc, char* argv[]) {
         logfile << log_entry("Closing logfile...");
         logfile.close();
 
-        cout << "timestamp: " << timestamp() << endl;
+        cout << timestamp() << endl;
         cout << "Goodbye!" << endl;
     }
 

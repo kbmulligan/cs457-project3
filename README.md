@@ -8,7 +8,7 @@ make
 ```
 
 ## Usage
-`./manager <NETWORKCONFIGFILE>`
+`./manager <NETWORK CONFIG FILE>`
 
 After running the manager with a given config file, the program generates logs with names of component.out where component is manager or routerID. 
 
