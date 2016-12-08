@@ -24,9 +24,11 @@ const int MANAGER_ID = -1;
 const std::string log_fn_manager = "manager.out";
 const std::string log_fn_router = "router.out";
 
-const int BUILD_DELAY = 1;        // sec to wait for routers to build tables
-const int TRANSMISSION_DELAY = 1; // sec to wait for routers to send packets
+const int BUILD_DELAY = 5;        // sec to wait for routers to build tables
+const int TRANSMISSION_DELAY = 2; // sec to wait for routers to send packets
 
+const int PACKET_SIZE = 128;
+const int HEADER_SIZE = sizeof(unsigned short) * 3;
 // DATA STRUCTURES /////////////////////////
 
 // message AKA packet
@@ -35,7 +37,7 @@ const int TRANSMISSION_DELAY = 1; // sec to wait for routers to send packets
 // 1 = ready
 // 2 = default / hello
 // 3 = quit
-// 4 = table update follows (LSP)
+// 55 = table update follows (LSP)
 // 5 = build table 
 // 6 = good local connections
 // 7 = test packet (USED FOR SIMULATED PACKETS) 
@@ -45,12 +47,13 @@ const int EMPTY = 0;
 const int READY = 1;
 const int HELLO = 2;
 const int QUIT = 3;
+const int TABLE_BUILD = 5;
 const int GOOD_CONN = 6;
 const int GOOD_TABLE = 8;
-const int TABLE_UPDATE = 4;
-const int TABLE_BUILD = 5;
-const int TEST_PACKET = 7;
+const int TABLE_UPDATE = 55;
+const int TEST_PACKET = 100;
 const int ERROR = 99;
+
 
 // simple message packet format
 const unsigned int ITEMS_IN_MESSAGE = 3;
@@ -67,6 +70,13 @@ typedef struct _Connection {
     unsigned short cost;
 } Connection;
 
+const unsigned int ITEMS_IN_PACKET = 3;
+typedef struct _Packet {
+    unsigned short src_router;              // source id
+    unsigned short dst_router;              // destination id
+    unsigned short bytes;                   // size of data
+    char data[PACKET_SIZE - HEADER_SIZE];
+} Packet;
 
 // router config
 class Router {
@@ -78,7 +88,7 @@ class Router {
     std::map<int,int> gateways;       // connectivity table
                                      // contains best next-hop given 
                                      // router id as index
-    std::map<int,int> global_cost;       // total costs 
+    std::map<int,int> global_costs;       // total costs 
 
 public:
     
@@ -98,13 +108,13 @@ public:
         neighbor_connections.push_back(n);
 
         gateways[nid] = nid;
-        global_cost[nid] = cost;
+        global_costs[nid] = cost;
     }
 
     void add_connection (int nid, int cost, int gateway) {
         
         // check current connectivity table for destination id
-   
+         
 
 
         // compare costs
@@ -113,7 +123,9 @@ public:
 
         // used this connection if cheaper
 
-
+        gateways[nid] = gateway;
+        global_costs[nid] = cost;
+        
         return;
     }
 
@@ -149,16 +161,23 @@ public:
     int get_cost_for_dest (int dst) {
         int total = 99;
 
-        std::map<int,int>::iterator it = global_cost.find(dst);
+        std::map<int,int>::iterator it = global_costs.find(dst);
         if (it != gateways.end()) {
-            total = global_cost.at(dst);
+            total = global_costs.at(dst);
         }
 
         return total;
     }
 
     int get_port_for_neighbor (int nid) {
-        return nid + start_port_router;
+        int port  = 0;
+
+        std::map<int,int>::iterator it = gateways.find(nid);
+        if (it != gateways.end()) {
+            port = get_port_for_router(gateways.at(nid));
+        }
+
+        return port; 
     }
 
     int get_port_for_router (int rid) {
@@ -289,4 +308,7 @@ int send_message_udp (unsigned short port, Message msg);
 Message get_message_tcp (int conn);
 Message get_message_udp (int conn);
 
+int read_udp_data (int sockfd, Packet* packet, int buflen);
+int send_udp_data (unsigned short port, void* data, int datalen, short src, short dst);
+void print_packet (Packet p);
 #endif

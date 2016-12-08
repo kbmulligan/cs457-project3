@@ -103,7 +103,8 @@ int send_short (int connectionfd, short data) {
     return 0; 
 }
 
-// reads string_legnth bytes of data from socket connectionfd and returns it as string
+// reads string_length bytes of data from socket connectionfd and 
+// returns it as string
 string read_string (int connectionfd, int string_length) {
    
     cout << "Reading string... of length: " << string_length <<
@@ -360,22 +361,28 @@ vector<string> split_string (string input) {
     return tokens;
 }
 
-void send_connection_data (int socketfd, Connection c) {
+void send_connection_data (int port, Connection c) {
 
     ;
 
 }
 
-int send_udp_short (unsigned short port, short data) {
+void send_udp_packet (int port, Message m ) {
+
+    return;
+}
+
+int send_udp_short (unsigned short port, short data, short src, short dst) {
     
 
     //cout << "Sending (h): " << data << endl;
 
-    short datasend = htons(data);                     // network byte order
+    //short datasend = htons(data);                     // network byte order
 
     //cout << "Sending (n): " << datasend << endl;
 
-    send_udp_data(port, &datasend, sizeof(datasend)); 
+    short datasend = data;
+    send_udp_data(port, &datasend, sizeof(datasend), src, dst); 
 
     return 0;
 }
@@ -383,18 +390,57 @@ int send_udp_short (unsigned short port, short data) {
 unsigned short read_udp_short (int sockfd) {
     unsigned short data = -1;
 
-    short buffer = 0;
+    Packet buffer;
     
-    read_udp_data(sockfd, (void *)&buffer, sizeof(buffer));
+    read_udp_data(sockfd, &buffer, sizeof(buffer));
 
-    //data = *(unsigned short *)buffer;
-    memcpy((void *)&data, (void *)&buffer, sizeof(data));
-    data = ntohs(data);                     // host bytes order
+    // data = *(unsigned short *)buffer;
+    // memcpy(&data, , sizeof(data));
+    data = *(short *)(buffer.data);               // host bytes order
 
     return data;
 }
 
-int read_udp_data (int sockfd, void* buffer, int buflen) {
+int send_udp_string (unsigned short port, string str, short src, short dst) {
+
+    long string_length = str.size();
+
+    char* marker = NULL;
+    int buflen = PACKET_SIZE;
+    char buffer[buflen];
+    memset(buffer, 0, buflen);
+
+    string_length = htonl(string_length);
+
+    marker = buffer;
+    marker = (char *)mempcpy(marker, &string_length, sizeof(string_length));
+    mempcpy(marker, str.c_str(), str.size());
+
+    send_udp_data (port, buffer, str.size(), src, dst);
+
+    return 0;
+}
+
+int read_udp_string (int sockfd, string output) {
+
+    int string_length = 0;  
+    int buflen = PACKET_SIZE;
+    // char buffer[buflen];
+    char str_buffer[buflen - sizeof(string_length)];
+
+    Packet packet;
+    read_udp_data (sockfd, &packet, buflen);
+
+    // mempcpy(&string_length, buffer.data, sizeof(string_length));
+    string_length = packet.bytes; 
+    mempcpy(&str_buffer, &(packet.data), string_length);
+
+    output = string(str_buffer);
+    
+    return 0;
+}
+
+int read_udp_data (int sockfd, Packet* packet, int buflen) {
 
     // const int MAX_BYTES = 128;
     // char buffer[MAX_BYTES];
@@ -402,19 +448,37 @@ int read_udp_data (int sockfd, void* buffer, int buflen) {
     struct sockaddr *from = NULL;
     socklen_t *fromlen = NULL;
 
-    int bytes_read = recvfrom(sockfd, buffer, buflen, flags, from, fromlen);
-    if (bytes_read < buflen) {
-        cerr << "read_udp_data: not all data read" << endl;
-    }
-    //cout << "read_udp_data: " << buffer << " (" << bytes_read << ")" << endl;
-    //cout << "read_udp_data: " << ((char *)buffer)[0] << ((char *)buffer)[1] << endl;
+    char buffer[PACKET_SIZE];
 
-    
+    unsigned int bytes_read = recvfrom(sockfd, buffer, sizeof(buffer), 
+                                       flags, from, fromlen);
+    while (bytes_read < sizeof(buffer)) {
+        cerr << "read_udp_data: not all data read, (" 
+             << bytes_read << " / " << buflen << ")" << endl;
+        bytes_read += recvfrom(sockfd, (char *)buffer + bytes_read, 
+                               buflen - bytes_read, flags, from, fromlen);
+    }
+
+    short src = -1;
+    short dst = -1;
+    short len = -1;
+
+    memcpy(&src, buffer, sizeof(src));
+    memcpy(&dst, buffer+2, sizeof(dst));
+    memcpy(&len, buffer+4, sizeof(len));
+
+    // put buffered data in packet
+    packet->src_router = ntohs(src); 
+    packet->dst_router = ntohs(dst); 
+    packet->bytes = ntohs(len); 
+    memcpy(packet->data, buffer+6, packet->bytes);
+     
     return 0;
 }
 
 // this function cheats and uses the first struct returned by getaddrinfo
-int send_udp_data (unsigned short port, void* data, int datalen) {
+int send_udp_data (unsigned short port, void* data, int datalen, 
+                   short src_id, short dst_id) {
 
     unsigned int flags = 0;
     //struct sockaddr *to = NULL;
@@ -426,6 +490,20 @@ int send_udp_data (unsigned short port, void* data, int datalen) {
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_DGRAM;
     hints.ai_flags = AI_PASSIVE; 
+
+    // setup packet memory space
+    char* marker = NULL;
+    char packet[PACKET_SIZE];
+    memset(packet, 0, PACKET_SIZE);
+
+    short src = htons(src_id);
+    short dst = htons(dst_id);
+    short len = htons((short)datalen);
+    marker = packet;
+    marker = (char *)mempcpy(marker, &src, sizeof(src));
+    marker = (char *)mempcpy(marker, &dst, sizeof(dst));
+    marker = (char *)mempcpy(marker, &len, sizeof(len));
+    marker = (char *)mempcpy(marker, data, datalen);
 
     int status = getaddrinfo(NULL, to_string(port).c_str(), &hints, &servinfo);
     if (status != 0) {
@@ -439,7 +517,7 @@ int send_udp_data (unsigned short port, void* data, int datalen) {
         cerr << "send_udp_data: socket error" << endl;
     }
 
-    int bytes_sent = sendto(sockfd, data, datalen, flags, 
+    int bytes_sent = sendto(sockfd, packet, sizeof(packet), flags, 
                             servinfo->ai_addr, servinfo->ai_addrlen);
 
     if (bytes_sent < datalen) {
@@ -450,3 +528,4 @@ int send_udp_data (unsigned short port, void* data, int datalen) {
 
     return 0;
 }
+

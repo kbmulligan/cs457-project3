@@ -106,6 +106,7 @@ int initialize_router (int data) {
         logfile << timestamp() << "HELLO MSG sent from " << id 
                 << " to " << n << endl;
     }
+    sleep(TRANSMISSION_DELAY);
     
 
     // receive all ACKs from neighbors
@@ -113,11 +114,6 @@ int initialize_router (int data) {
     logfile << timestamp() << "Waiting for ACKs from neighbors..." << endl;
     for (int n : router.get_neighbors()) {
         Message msg = get_message_udp(sockfd);
-
-        //cout << "Router " << id <<  ", received data: " 
-        //     << printable_msg(msg)
-        //     << " expecting data from " << n << endl;
-
         logfile << timestamp() << n << " Received: " << printable_msg(msg) << endl;
     }
     logfile << timestamp() << "Received all expected HELLOs from neighbors..." 
@@ -129,29 +125,64 @@ int initialize_router (int data) {
     goodcon.dst_router = MANAGER_ID;
     goodcon.message = GOOD_CONN;
     send_message_tcp(manager_cfd, goodcon);
+    logfile << timestamp() << "Router->Manager: Good local connections" << endl;
 
 
     // wait for network is up msg
-    Message goodglobal;
-    goodglobal.src_router = id;
-    goodglobal.dst_router = MANAGER_ID;
-    goodglobal.message = GOOD_TABLE;
-    send_message_tcp(manager_cfd, goodglobal);
+
 
 
     // send LSP to neighbors
+    for (int n : router.get_neighbors()) {
+        Message lsp;
+        lsp.src_router = id;
+        lsp.dst_router = n;
+        lsp.message = TABLE_UPDATE;
 
+        int p = router.get_port_for_router(n); 
+        send_message_udp(p, lsp);
+        logfile << timestamp() << "Sent LSP signal to router " << n << " -- "
+                << printable_msg(lsp) << endl;
+    }
+    sleep(TRANSMISSION_DELAY);
+    
 
     // perform limited broadcast on received LSPs 
 
     // calc SPT using Dijkstra's algo
 
+    sleep(3);
+    if (id == 0) {
+        string hello2 = "Hellow number 2";
+        send_udp_string(49002, hello2, 0, 2);
+        cout << "String sent..." << endl;
+    }
+    if (id == 2) {
+        string getit = "THIS SHIT DIDN'T WORK!!!";
+        read_udp_string(sockfd, getit);
+        cout << "String read: " << getit << endl;
+    }
+
+
     // output SPT table by appending it to log file
 
     // update forwarding table
 
+
+    // TEST
+    // router.add_connection(9, 10, 5);
+
+    // tell manager routing table complete
+    Message goodglobal;
+    goodglobal.src_router = id;
+    goodglobal.dst_router = MANAGER_ID;
+    goodglobal.message = GOOD_TABLE;
+    send_message_tcp(manager_cfd, goodglobal);
+    logfile << timestamp() << "Router->Manager: Routing table complete" << endl;
+
+    // log forwarding table
     logfile << timestamp() << endl;
-    logfile << "Gateways/Connectivity Table" << endl;
+    logfile << "----- Forwarding Table -----" << endl;
     logfile << router.get_gateways();
 
 
@@ -159,10 +190,13 @@ int initialize_router (int data) {
     // exit when quit message received
     Message latest = get_message_udp(sockfd);
     while (latest.message != QUIT) {
+
+        // log all packet arrivals
         logfile << timestamp() << "Router received message: " 
                 << printable_msg(latest) << endl; 
 
-        if (latest.message == TEST_PACKET && latest.dst_router != id) {
+        // only forward updates packets and test packets
+        if (latest.message >= TABLE_UPDATE && latest.dst_router != id) {
 
             int next_hop = router.get_next_hop(latest.dst_router);
             if (next_hop == -1) {
@@ -172,9 +206,9 @@ int initialize_router (int data) {
             }
 
             unsigned short dstport = router.get_port_for_neighbor(next_hop);
-            if (dstport != 0) {
+            if (dstport > 0) {
                 send_message_udp(dstport, latest);
-                logfile << timestamp() << "Packet sent from " << id
+                logfile << timestamp() << "Packet forwarded from " << id
                         << " to " << latest.dst_router << endl;
             } else {
                 logfile << timestamp() << "Unable to forward packet(port): "
@@ -183,9 +217,10 @@ int initialize_router (int data) {
                         
             }
         } else if (latest.dst_router == id) {
-            logfile << timestamp() << "PACKET RECEIVED! Packet was for me! " << endl;
+            logfile << timestamp() << "PACKET RECEIVED! Packet was for me!" << endl;
         }       
-         
+        
+        // retrieve latest packet 
         latest = get_message_udp(sockfd);
     }
     logfile << timestamp() << "Router received QUIT message... " << endl; 

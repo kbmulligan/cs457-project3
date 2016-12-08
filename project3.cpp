@@ -1,7 +1,9 @@
 #include <vector> 
+#include <map> 
 
 #include "core.h"
 #include "project3.h"
+
 using namespace std;
 
 vector<Connection> Network::get_connections_for_node (int node) {
@@ -133,9 +135,14 @@ Message get_message_tcp (int conn) {
 
 int send_message_udp (unsigned short port, Message msg) {
 
-    send_udp_short(port, (short)msg.src_router);
-    send_udp_short(port, (short)msg.dst_router);
-    send_udp_short(port, (short)msg.message);
+    send_udp_short(port, (short)msg.src_router, 
+                         (short)msg.src_router, (short)msg.dst_router );
+
+    send_udp_short(port, (short)msg.dst_router, 
+                         (short)msg.src_router, (short)msg.dst_router );
+
+    send_udp_short(port, (short)msg.message,
+                         (short)msg.src_router, (short)msg.dst_router );
 
     return 0;
 }
@@ -152,4 +159,25 @@ Message get_message_udp (int conn) {
     m.message = msg;
 
     return m;
+}
+
+string get_msg_translation (Message msg) {
+
+    std::map<int,std::string> TRANSLATION;
+
+    string readable = "";
+
+    return readable;
+}
+
+void print_packet (Packet p) {
+    cout << "Packet: " << endl;
+    cout << p.src_router << endl;
+    cout << p.dst_router << endl;
+    cout << p.bytes << endl;
+
+    for (int i = 0; i < p.bytes; i++) {
+        cout << p.data[i];
+    }
+    cout << endl;
 }
