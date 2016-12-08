@@ -310,14 +310,14 @@ void send_msg_all_tcp (vector<int> routers, vector<int> conns, int msg) {
 
 void send_msg_all_udp (vector<int> routers, vector<int> ports, int msg) {
 
-    Message m;
+    Packet m;
     m.src_router = -1;
     m.dst_router = -1;
-    m.message = msg;
+    m.type = msg;
 
     for ( int r : routers ) {
             int c = ports.at(r);
-            send_message_udp(c, m);
+            send_udp_packet(c, m);
     }
 
     return;

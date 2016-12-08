@@ -1,5 +1,6 @@
 #include <vector> 
 #include <map> 
+#include <cstring>
 
 #include "core.h"
 #include "project3.h"
@@ -134,7 +135,8 @@ Message get_message_tcp (int conn) {
 }
 
 int send_message_udp (unsigned short port, Message msg) {
-
+    
+    /*
     send_udp_short(port, (short)msg.src_router, 
                          (short)msg.src_router, (short)msg.dst_router );
 
@@ -143,20 +145,34 @@ int send_message_udp (unsigned short port, Message msg) {
 
     send_udp_short(port, (short)msg.message,
                          (short)msg.src_router, (short)msg.dst_router );
+    */
+
+    Packet packet;
+    packet.src_router = (short)msg.src_router;
+    packet.dst_router = (short)msg.dst_router;
+    packet.type = TYPE_MESSAGE;
+    packet.bytes = sizeof(msg.message);
+    memcpy(packet.data, &(msg.message), sizeof(msg.message));
+
+    send_udp_packet (port, packet);
 
     return 0;
 }
 
 Message get_message_udp (int conn) {
-
+ 
+    /*
     short src = read_udp_short(conn);
     short dst = read_udp_short(conn);
     short msg = read_udp_short(conn);
+    */
+    Packet packet;
+    read_udp_packet(conn, &packet);
 
     Message m;
-    m.src_router = src;
-    m.dst_router = dst;
-    m.message = msg;
+    m.src_router = packet.src_router;
+    m.dst_router = packet.dst_router;
+    m.message = (short)*(packet.data);
 
     return m;
 }

@@ -30,12 +30,6 @@ const int TRANSMISSION_DELAY = 2; // sec to wait for routers to send packets
 const int PACKET_SIZE = 128;
 const int HEADER_SIZE = sizeof(unsigned short) * 4;
 
-const int TYPE_PACKET = 0;
-const int TYPE_SHORT = 1;
-const int TYPE_STRING = 2;
-const int TYPE_MESSAGE = 3;
-const int TYPE_CONNECTION = 4;
-const int TYPE_CONNECTION_TABLE = 5;
 
 
 // DATA STRUCTURES /////////////////////////
@@ -63,6 +57,12 @@ const int TABLE_UPDATE = 55;
 const int TEST_PACKET = 100;
 const int ERROR = 99;
 
+const int TYPE_PACKET = 70;
+const int TYPE_SHORT = 71;
+const int TYPE_STRING = 72;
+const int TYPE_MESSAGE = 73;
+const int TYPE_CONNECTION = 74;
+const int TYPE_CONNECTION_TABLE = 75;
 
 // simple message packet format
 const unsigned int ITEMS_IN_MESSAGE = 3;
@@ -159,6 +159,10 @@ public:
 
     std::vector<int> get_ports() {
         return ports;
+    }
+
+    std::vector<Connection> get_links () {
+        return neighbor_connections;
     }
 
     int get_cost_for_neighbor (int nid) {
@@ -279,6 +283,7 @@ public:
         return connections;
     }
 
+
     std::vector<Connection> get_connections_for_node (int node);
 
     int read_config (std::string filename);
@@ -315,6 +320,7 @@ public:
 int initialize_router(int data);
 int send_message (int conn, Message msg);
 std::string printable_msg (Message msg);
+std::string printable_packet (Packet msg);
 std::string translate_signal (int signal);
 Connection create_connection (std::vector<std::string> c);
 Connection reverse_connection (Connection c);
@@ -327,5 +333,9 @@ Message get_message_udp (int conn);
 int read_udp_data (int sockfd, Packet* packet, int buflen);
 int send_udp_data (unsigned short port, void* data, int datalen, 
                    short src, short dst, short type);
+
+int read_udp_packet (int sfd, Packet *packet);
+int send_udp_packet (int port, Packet packet);
+
 void print_packet (Packet p);
 #endif

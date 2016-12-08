@@ -344,6 +344,13 @@ string printable_msg (Message msg) {
             "MSG:" + to_string(msg.message);
 }
 
+string printable_packet (Packet msg) {
+    return  "SRC:" + to_string(msg.src_router) + " " + 
+            "DST:" + to_string(msg.dst_router) + " " + 
+            "TYPE:" + to_string(msg.type) + " " + 
+            "SIZE:" + to_string(msg.bytes);
+}
+
 string translate_signal (int signal) {
     return to_string(signal);
 }
@@ -367,10 +374,83 @@ void send_connection_data (int port, Connection c) {
 
 }
 
-void send_udp_packet (int port, Message m ) {
+int send_udp_packet (int port, Packet packet) {
+    
+    unsigned int flags = 0;
 
-    return;
+    struct addrinfo *servinfo;
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_flags = AI_PASSIVE; 
+
+    int status = getaddrinfo(NULL, to_string(port).c_str(), &hints, &servinfo);
+    if (status != 0) {
+        cerr << "send_udp_packet: getaddrinfo error" << endl;
+    }
+
+    int sockfd = socket(servinfo->ai_family, 
+                        servinfo->ai_socktype, 
+                        servinfo->ai_protocol);
+    if (sockfd == -1) {
+        cerr << "send_udp_packet: socket error" << endl;
+    }
+
+    unsigned int bytes_sent = sendto(sockfd, &packet, sizeof(packet), flags, 
+                            servinfo->ai_addr, servinfo->ai_addrlen);
+
+    if (bytes_sent < sizeof(packet)) {
+        cerr << "send_udp_packet: not all data sent" << endl;
+    }
+
+    return 0;
 }
+
+int read_udp_packet (int sockfd, Packet *packet) {
+
+    unsigned int flags = 0;
+    struct sockaddr *from = NULL;
+    socklen_t *fromlen = NULL;
+
+    unsigned int buflen = sizeof(Packet);
+    char buffer[buflen];
+
+    unsigned int bytes_read = recvfrom(sockfd, buffer, buflen, 
+                                       flags, from, fromlen);
+    while (bytes_read < buflen) {
+        cerr << "read_udp_data: not all data read, (" 
+             << bytes_read << " / " << buflen << ")" << endl;
+        bytes_read += recvfrom(sockfd, (char *)buffer + bytes_read, 
+                               buflen - bytes_read, flags, from, fromlen);
+    }
+
+    short src = -1;
+    short dst = -1;
+    short typ = -1;
+    short len = -1;
+
+    char* mark = buffer;
+    memcpy(&src, mark, sizeof(src));
+    mark += sizeof(short);
+    memcpy(&dst, mark, sizeof(dst));
+    mark += sizeof(short);
+    memcpy(&typ, mark, sizeof(typ));
+    mark += sizeof(short);
+    memcpy(&len, mark, sizeof(len));
+    mark += sizeof(short);
+
+    // put buffered data in packet
+    packet->src_router = src; 
+    packet->dst_router = dst; 
+    packet->type = typ; 
+    packet->bytes = len; 
+
+    memcpy(packet->data, mark, packet->bytes);
+
+    return 0;
+}
+
 
 int send_udp_short (unsigned short port, short data, short src, short dst) {
     

@@ -9,6 +9,7 @@
 #include <iostream>
 #include <string>
 #include <unistd.h>
+#include <cstring>
 
 #include "core.h"
 #include "project3.h"
@@ -134,15 +135,29 @@ int initialize_router (int data) {
 
     // send LSP to neighbors
     for (int n : router.get_neighbors()) {
-        Message lsp;
-        lsp.src_router = id;
-        lsp.dst_router = n;
-        lsp.message = TABLE_UPDATE;
 
         int p = router.get_port_for_router(n); 
-        send_message_udp(p, lsp);
-        logfile << timestamp() << "Sent LSP signal to router " << n << " -- "
-                << printable_msg(lsp) << endl;
+
+        int num_conns = router.get_links().size();
+        Connection connections[num_conns]; 
+
+        int i = 0;
+        for (Connection c : router.get_links()) {
+            connections[i] = c;
+        }
+
+        Packet lsp;
+        lsp.src_router = id;
+        lsp.dst_router = n;
+        lsp.type = TYPE_CONNECTION_TABLE;
+        lsp.bytes = sizeof(connections);
+        
+        memcpy(&(lsp.data), connections, sizeof(connections)); 
+     
+        send_udp_packet(p, lsp);
+
+        logfile << timestamp() << "Sent LSP to router " << n << " -- "
+                << printable_packet(lsp) << endl;
     }
     sleep(TRANSMISSION_DELAY);
     
@@ -174,56 +189,42 @@ int initialize_router (int data) {
     logfile << router.get_gateways();
 
 
-    // string testing
-    /*
-    sleep(3);
-    if (id == 0) {
-        string hello2 = "Hellow number 2";
-        send_udp_string(49002, hello2, 0, 2);
-        cout << "String sent..." << endl;
-    }
-    if (id == 2) {
-        string getit = "THIS SHIT DIDN'T WORK!!!";
-        read_udp_string(sockfd, getit);
-        cout << "String read: " << getit << endl;
-    }
-    */
-
 
 
     // wait for packet instructions
     // exit when quit message received
-    Message latest = get_message_udp(sockfd);
-    while (latest.message != QUIT) {
+    Packet latest;
+    read_udp_packet(sockfd, &latest);
+    while (latest.type != QUIT) {
 
         // log all packet arrivals
         logfile << timestamp() << "Router received message: " 
-                << printable_msg(latest) << endl; 
+                << printable_packet(latest) << endl; 
 
         // only forward updates packets and test packets
-        if (latest.message >= TABLE_UPDATE && latest.dst_router != id) {
+        if (latest.type >= TABLE_UPDATE && latest.dst_router != id) {
 
             // update table if packet calls for it
-            if (latest.message == TABLE_UPDATE) {
-                router.update_table(latest);
+            if (latest.bytes == TABLE_UPDATE) {
+                ;//router.update_table(latest);
             }
 
             int next_hop = router.get_next_hop(latest.dst_router);
             if (next_hop == -1) {
                 logfile << timestamp() << "Unable to forward packet(hop): "
                         << "Router not in connectivity table -- " 
-                        << printable_msg(latest) << endl;
+                        << printable_packet(latest) << endl;
             }
 
             unsigned short dstport = router.get_port_for_neighbor(next_hop);
             if (dstport > 0) {
-                send_message_udp(dstport, latest);
+                send_udp_packet(dstport, latest);
                 logfile << timestamp() << "Packet forwarded from " << id
                         << " to " << latest.dst_router << endl;
             } else {
                 logfile << timestamp() << "Unable to forward packet(port): "
                         << "Router not in connectivity table -- " 
-                        << printable_msg(latest) << endl;
+                        << printable_packet(latest) << endl;
                         
             }
         } else if (latest.dst_router == id) {
@@ -232,7 +233,7 @@ int initialize_router (int data) {
         }       
         
         // retrieve latest packet 
-        latest = get_message_udp(sockfd);
+        read_udp_packet(sockfd, &latest);
     }
     logfile << timestamp() << "Router received QUIT message... " << endl; 
 
