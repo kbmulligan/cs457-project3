@@ -382,7 +382,7 @@ int send_udp_short (unsigned short port, short data, short src, short dst) {
     //cout << "Sending (n): " << datasend << endl;
 
     short datasend = data;
-    send_udp_data(port, &datasend, sizeof(datasend), src, dst); 
+    send_udp_data(port, &datasend, sizeof(datasend), src, dst, TYPE_SHORT); 
 
     return 0;
 }
@@ -403,6 +403,7 @@ unsigned short read_udp_short (int sockfd) {
 
 int send_udp_string (unsigned short port, string str, short src, short dst) {
 
+    /*
     long string_length = str.size();
 
     char* marker = NULL;
@@ -415,8 +416,11 @@ int send_udp_string (unsigned short port, string str, short src, short dst) {
     marker = buffer;
     marker = (char *)mempcpy(marker, &string_length, sizeof(string_length));
     mempcpy(marker, str.c_str(), str.size());
+    */
+    char data[str.size()];
+    memcpy(data, str.c_str(), str.size());
 
-    send_udp_data (port, buffer, str.size(), src, dst);
+    send_udp_data (port, data, str.size(), src, dst, TYPE_STRING);
 
     return 0;
 }
@@ -424,18 +428,19 @@ int send_udp_string (unsigned short port, string str, short src, short dst) {
 int read_udp_string (int sockfd, string output) {
 
     int string_length = 0;  
-    int buflen = PACKET_SIZE;
-    // char buffer[buflen];
-    char str_buffer[buflen - sizeof(string_length)];
 
     Packet packet;
-    read_udp_data (sockfd, &packet, buflen);
+    read_udp_data (sockfd, &packet, PACKET_SIZE);
 
-    // mempcpy(&string_length, buffer.data, sizeof(string_length));
     string_length = packet.bytes; 
+    char str_buffer[string_length];
+
     mempcpy(&str_buffer, &(packet.data), string_length);
 
     output = string(str_buffer);
+
+    cout << "READ_UDP_STRING: " << string(str_buffer) << output << endl;
+    cout << "READ_UDP_STRING should be this long: " << packet.bytes << endl;
     
     return 0;
 }
@@ -461,24 +466,32 @@ int read_udp_data (int sockfd, Packet* packet, int buflen) {
 
     short src = -1;
     short dst = -1;
+    short typ = -1;
     short len = -1;
 
-    memcpy(&src, buffer, sizeof(src));
-    memcpy(&dst, buffer+2, sizeof(dst));
-    memcpy(&len, buffer+4, sizeof(len));
+    char* mark = buffer;
+    memcpy(&src, mark, sizeof(src));
+    mark += sizeof(short);
+    memcpy(&dst, mark, sizeof(dst));
+    mark += sizeof(short);
+    memcpy(&typ, mark, sizeof(len));
+    mark += sizeof(short);
+    memcpy(&len, mark, sizeof(len));
+    mark += sizeof(short);
 
     // put buffered data in packet
     packet->src_router = ntohs(src); 
     packet->dst_router = ntohs(dst); 
+    packet->type = ntohs(typ); 
     packet->bytes = ntohs(len); 
-    memcpy(packet->data, buffer+6, packet->bytes);
+    memcpy(packet->data, mark, packet->bytes);
      
     return 0;
 }
 
 // this function cheats and uses the first struct returned by getaddrinfo
 int send_udp_data (unsigned short port, void* data, int datalen, 
-                   short src_id, short dst_id) {
+                   short src_id, short dst_id, short type) {
 
     unsigned int flags = 0;
     //struct sockaddr *to = NULL;
@@ -498,10 +511,12 @@ int send_udp_data (unsigned short port, void* data, int datalen,
 
     short src = htons(src_id);
     short dst = htons(dst_id);
+    short typ = htons(type);
     short len = htons((short)datalen);
     marker = packet;
     marker = (char *)mempcpy(marker, &src, sizeof(src));
     marker = (char *)mempcpy(marker, &dst, sizeof(dst));
+    marker = (char *)mempcpy(marker, &typ, sizeof(typ));
     marker = (char *)mempcpy(marker, &len, sizeof(len));
     marker = (char *)mempcpy(marker, data, datalen);
 

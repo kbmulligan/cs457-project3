@@ -28,7 +28,16 @@ const int BUILD_DELAY = 5;        // sec to wait for routers to build tables
 const int TRANSMISSION_DELAY = 2; // sec to wait for routers to send packets
 
 const int PACKET_SIZE = 128;
-const int HEADER_SIZE = sizeof(unsigned short) * 3;
+const int HEADER_SIZE = sizeof(unsigned short) * 4;
+
+const int TYPE_PACKET = 0;
+const int TYPE_SHORT = 1;
+const int TYPE_STRING = 2;
+const int TYPE_MESSAGE = 3;
+const int TYPE_CONNECTION = 4;
+const int TYPE_CONNECTION_TABLE = 5;
+
+
 // DATA STRUCTURES /////////////////////////
 
 // message AKA packet
@@ -70,10 +79,11 @@ typedef struct _Connection {
     unsigned short cost;
 } Connection;
 
-const unsigned int ITEMS_IN_PACKET = 3;
+const unsigned int ITEMS_IN_PACKET = 4;
 typedef struct _Packet {
     unsigned short src_router;              // source id
     unsigned short dst_router;              // destination id
+    unsigned short type;                    // type of data
     unsigned short bytes;                   // size of data
     char data[PACKET_SIZE - HEADER_SIZE];
 } Packet;
@@ -127,6 +137,12 @@ public:
         global_costs[nid] = cost;
         
         return;
+    }
+
+    void update_table (Message update) {
+
+        ;
+
     }
 
     int get_id () {
@@ -309,6 +325,7 @@ Message get_message_tcp (int conn);
 Message get_message_udp (int conn);
 
 int read_udp_data (int sockfd, Packet* packet, int buflen);
-int send_udp_data (unsigned short port, void* data, int datalen, short src, short dst);
+int send_udp_data (unsigned short port, void* data, int datalen, 
+                   short src, short dst, short type);
 void print_packet (Packet p);
 #endif

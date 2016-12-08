@@ -151,22 +151,10 @@ int initialize_router (int data) {
 
     // calc SPT using Dijkstra's algo
 
-    sleep(3);
-    if (id == 0) {
-        string hello2 = "Hellow number 2";
-        send_udp_string(49002, hello2, 0, 2);
-        cout << "String sent..." << endl;
-    }
-    if (id == 2) {
-        string getit = "THIS SHIT DIDN'T WORK!!!";
-        read_udp_string(sockfd, getit);
-        cout << "String read: " << getit << endl;
-    }
 
 
     // output SPT table by appending it to log file
 
-    // update forwarding table
 
 
     // TEST
@@ -186,6 +174,23 @@ int initialize_router (int data) {
     logfile << router.get_gateways();
 
 
+    // string testing
+    /*
+    sleep(3);
+    if (id == 0) {
+        string hello2 = "Hellow number 2";
+        send_udp_string(49002, hello2, 0, 2);
+        cout << "String sent..." << endl;
+    }
+    if (id == 2) {
+        string getit = "THIS SHIT DIDN'T WORK!!!";
+        read_udp_string(sockfd, getit);
+        cout << "String read: " << getit << endl;
+    }
+    */
+
+
+
     // wait for packet instructions
     // exit when quit message received
     Message latest = get_message_udp(sockfd);
@@ -197,6 +202,11 @@ int initialize_router (int data) {
 
         // only forward updates packets and test packets
         if (latest.message >= TABLE_UPDATE && latest.dst_router != id) {
+
+            // update table if packet calls for it
+            if (latest.message == TABLE_UPDATE) {
+                router.update_table(latest);
+            }
 
             int next_hop = router.get_next_hop(latest.dst_router);
             if (next_hop == -1) {
@@ -218,6 +228,7 @@ int initialize_router (int data) {
             }
         } else if (latest.dst_router == id) {
             logfile << timestamp() << "PACKET RECEIVED! Packet was for me!" << endl;
+            
         }       
         
         // retrieve latest packet 
