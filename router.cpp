@@ -10,6 +10,7 @@
 #include <string>
 #include <unistd.h>
 #include <cstring>
+#include <cassert>
 
 #include "core.h"
 #include "project3.h"
@@ -144,6 +145,7 @@ int initialize_router (int data) {
         int i = 0;
         for (Connection c : router.get_links()) {
             connections[i] = c;
+            i++;
         }
 
         Packet lsp;
@@ -158,11 +160,12 @@ int initialize_router (int data) {
 
         logfile << timestamp() << "Sent LSP to router " << n << " -- "
                 << printable_packet(lsp) << endl;
+                //" Connections: " << num_conns  << " " 
+                //<< sizeof(connections) << endl;
     }
     sleep(TRANSMISSION_DELAY);
     
 
-    // perform limited broadcast on received LSPs 
 
     // calc SPT using Dijkstra's algo
 
@@ -204,11 +207,6 @@ int initialize_router (int data) {
         // only forward updates packets and test packets
         if (latest.type >= TABLE_UPDATE && latest.dst_router != id) {
 
-            // update table if packet calls for it
-            if (latest.bytes == TABLE_UPDATE) {
-                ;//router.update_table(latest);
-            }
-
             int next_hop = router.get_next_hop(latest.dst_router);
             if (next_hop == -1) {
                 logfile << timestamp() << "Unable to forward packet(hop): "
@@ -230,12 +228,50 @@ int initialize_router (int data) {
         } else if (latest.dst_router == id) {
             logfile << timestamp() << "PACKET RECEIVED! Packet was for me!" << endl;
             
+            // update table if packet calls for it
+            if (latest.type == TYPE_CONNECTION_TABLE) {
+                int num_updates = latest.bytes / sizeof(Connection);
+                Connection conns[num_updates];
+
+                memcpy(conns, latest.data, latest.bytes); 
+ 
+                logfile << "Connectivity table from Router " 
+                        << latest.src_router << endl;
+                for (int i = 0; i < num_updates; i++) {
+                    logfile << "CONNECTION: " << conns[i].src_id << " "
+                            << conns[i].dst_id << " " << conns[i].cost << " "
+                            << endl;
+                    router.update_table(conns[i]);
+                }
+            }
+
+            // selective relay
+            /*
+            for (int n : router.get_neighbors()) {
+                unsigned short dstport = router.get_port_for_neighbor(n);
+                if (dstport > 0 && n != latest.src_router) {
+                    latest.src_router = id;
+                    latest.dst_router = n;
+                    send_udp_packet(dstport, latest);
+                    logfile << timestamp() << "Packet forwarded from "
+                            << latest.src_router << " to " 
+                            << latest.dst_router << endl;
+                }
+            }
+            */
+
         }       
         
         // retrieve latest packet 
         read_udp_packet(sockfd, &latest);
     }
+
     logfile << timestamp() << "Router received QUIT message... " << endl; 
+
+    // log forwarding table
+    logfile << timestamp() << endl;
+    logfile << "----- Forwarding Table -----" << endl;
+    logfile << router.get_gateways();
 
     logfile << log_entry("Routing complete!"); 
     logfile.close(); 

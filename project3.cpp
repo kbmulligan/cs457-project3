@@ -150,7 +150,7 @@ int send_message_udp (unsigned short port, Message msg) {
     Packet packet;
     packet.src_router = (short)msg.src_router;
     packet.dst_router = (short)msg.dst_router;
-    packet.type = TYPE_MESSAGE;
+    packet.type = msg.message;
     packet.bytes = sizeof(msg.message);
     memcpy(packet.data, &(msg.message), sizeof(msg.message));
 
@@ -196,4 +196,9 @@ void print_packet (Packet p) {
         cout << p.data[i];
     }
     cout << endl;
+}
+
+void print_connection (Connection c) {
+    cout << "Connection: SRC:" << c.src_id << " "
+         << "DST:" << c.dst_id << " Cost:" << c.cost << endl;
 }

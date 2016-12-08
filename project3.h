@@ -96,14 +96,15 @@ class Router {
     std::vector<int> costs;
     std::vector<int> ports;
     std::map<int,int> gateways;       // connectivity table
-                                     // contains best next-hop given 
-                                     // router id as index
-    std::map<int,int> global_costs;       // total costs 
+                                      // contains best next-hop given 
+                                      // router id as index
+    std::map<int,int> global_costs;   // total costs 
 
 public:
     
     Router (int new_id) {
         id = new_id;
+        add_connection(id, 0, id);
     }
 
     void add_neighbor (int nid, int cost, int port) {
@@ -122,26 +123,36 @@ public:
     }
 
     void add_connection (int nid, int cost, int gateway) {
-        
-        // check current connectivity table for destination id
-         
-
-
-        // compare costs
-
-
-
-        // used this connection if cheaper
-
         gateways[nid] = gateway;
         global_costs[nid] = cost;
-        
         return;
     }
 
-    void update_table (Message update) {
+    void update_table (Connection update) {
+        
+        unsigned short src = update.src_id;
+        unsigned short dst = update.dst_id;
+        unsigned short cost = update.cost;
 
-        ;
+        /// check for it in gateways first
+        std::map<int,int>::iterator it = gateways.find(dst);
+        if (it != gateways.end()) {
+            // add it because we don't have it
+            add_connection(dst, get_cost_for_dest(src) + cost, src);
+            //std::cout << " Added it because we don't have it" << std::endl;
+
+        } else {
+            // compare costs
+            if (get_cost_for_dest(src) + cost < get_cost_for_dest(dst)) {
+                // add it because it's cheaper
+                //std::cout << " Added it because it's cheaper" << std::endl;
+                add_connection(dst, get_cost_for_dest(src) + cost, src);
+            } 
+            else {
+                ;
+                //std::cout << " Didn't add it" << std::endl;
+            }
+        }
 
     }
 
@@ -182,7 +193,7 @@ public:
         int total = 99;
 
         std::map<int,int>::iterator it = global_costs.find(dst);
-        if (it != gateways.end()) {
+        if (it != global_costs.end()) {
             total = global_costs.at(dst);
         }
 
@@ -324,6 +335,7 @@ std::string printable_packet (Packet msg);
 std::string translate_signal (int signal);
 Connection create_connection (std::vector<std::string> c);
 Connection reverse_connection (Connection c);
+void print_connection (Connection c);
 
 int send_message_tcp (int conn, Message msg);
 int send_message_udp (unsigned short port, Message msg);

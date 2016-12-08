@@ -18,6 +18,8 @@ After the router processes exchange connectivity information with their neighbor
 
 When all packets have been transmitted, the program exits. All activity is logged.
 
+The program should only run for 60 seconds at most. Less than 10 seconds with small numbers of routers.
+
 ## Notes
 - Timestamps use UTC and have a resolution down to microseconds
 
